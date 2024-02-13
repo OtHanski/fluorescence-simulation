@@ -10,3 +10,20 @@ Finally, plot data and results with pyplot.
 
 If you're *really* bored, multithread the operation :D
 """
+
+from photon import Photon
+
+### 
+
+
+def main():
+    pass
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    main()
