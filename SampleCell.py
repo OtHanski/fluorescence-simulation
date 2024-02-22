@@ -19,33 +19,68 @@ for both angles.
 """
 
 import numpy as np
+import math
 
 class SampleCell:
-    def __init__(self, z, r, z_samples, r_samples):
+    def __init__(self, z, r, samples = 1000):
         self.z = z
+        self.dz = z[1] - z[0]
         self.r = r
-        self.zlen = z_samples
-        self.wall = np.zeros(z_samples-1)
+        self.samp = samples
 
-        for i in range(z_samples-1):
+        # Calculate the angle of the wall against the z-axis
+        self.wall = np.zeros(self.samp-1)
+
+        for i in range(self.samp-1):
             self.wall[i] = np.arctan((r[i+1]-r[i])/(z[i+1]-z[i]))
     
-    def hit_wall(self, z_start, r_start, theta, phi):
-        # Check location of wall hit, return new z, r, theta, phi
-        pass
+    def hit_wall(self, position = [0,0,0], direction = [1,1,1]):
+        # Check location of wall hit, return exit status, new position and (specular) direction.
+        # If the photon exits out of either end of the cell, return the exit location and direction.
+        # Direction should be of the form [dx,dy,1] for easy calculations. If not, then we correct.
+
+        direction = direction / direction[2]
+        
+        z_start = position[2]
+        # Check direction of photon
+        if direction[2] > 0:
+            z_dir = True
+        else:
+            z_dir = False
+        # Find the location of z_start in the z array:
+        z_index = self.get_z_index(z_start)
+
+        # Construct the r coordinates of the photon path
+        r_path = np.zeros((self.samp))
+        pos_path = np.zeros((self.samp,3))
+        if z_dir:
+            pos_path[z_index:] = position + direction * (self.z[z_index:] - z_start)
+            r_path[z_index:] =  np.sqrt(pos_path[z_index:,0]**2 + pos_path[z_index:,1]**2)
+        else:
+            pos_path[:z_index] = position - direction * (z_start - self.z[:z_index])
+            r_path[:z_index] =  np.sqrt(pos_path[:z_index,0]**2 + pos_path[:z_index,1]**2)
+
+        # Calculate exact location of wall hit via linear interpolation
+        idhit = np.argwhere(np.diff(np.sign(r_path - self.r)) != 0)
+
+        r1, r2 = r_path[idhit], r_path[idhit+1]
+        r3, r4 = self.r[idhit], self.r[idhit+1]
+        z1 = self.z[idhit]
+        zhit = z1 + (r3 - r1) / (r2-r4 + r3-r1)
+
+        poshit = position + direction * (zhit - z_start)
+        
+        
 
         
     def get_z_index(self, z):
         # Return the index of z in the z array
-        pass
-        """
-        def find_nearest(array,value):
-            idx = np.searchsorted(array, value, side="left")
-            if idx > 0 and (idx == len(array) or math.fabs(value - array[idx-1]) < math.fabs(value - array[idx])):
-                return array[idx-1]
-            else:
-                return array[idx]
-        """
+        
+        idx = np.searchsorted(self.z, z, side="left")
+        if idx > 0 and (idx == len(self.z) or math.fabs(z - self.z[idx-1]) < math.fabs(z - self.z[idx])):
+            return idx-1
+        else:
+            return idx
 
     def get_wall_angle(self, z):
         # Return the angle of the wall at z
