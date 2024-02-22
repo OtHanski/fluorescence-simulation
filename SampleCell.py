@@ -37,9 +37,10 @@ class SampleCell:
     def hit_wall(self, position = [0,0,0], direction = [1,1,1]):
         # Check location of wall hit, return exit status, new position and (specular) direction.
         # If the photon exits out of either end of the cell, return the exit location and direction.
-        # Direction should be of the form [dx,dy,1] for easy calculations. If not, then we correct.
+        # Direction should be a unit vector of the form [dx,dy,dz] for easy calculations. 
 
-        direction = direction / direction[2]
+        # Define transit vector for easy calculations of path.
+        transit = direction / direction[2]
         
         z_start = position[2]
         # Check direction of photon
@@ -54,10 +55,10 @@ class SampleCell:
         r_path = np.zeros((self.samp))
         pos_path = np.zeros((self.samp,3))
         if z_dir:
-            pos_path[z_index:] = position + direction * (self.z[z_index:] - z_start)
+            pos_path[z_index:] = position + transit * (self.z[z_index:] - z_start)
             r_path[z_index:] =  np.sqrt(pos_path[z_index:,0]**2 + pos_path[z_index:,1]**2)
         else:
-            pos_path[:z_index] = position - direction * (z_start - self.z[:z_index])
+            pos_path[:z_index] = position - transit * (z_start - self.z[:z_index])
             r_path[:z_index] =  np.sqrt(pos_path[:z_index,0]**2 + pos_path[:z_index,1]**2)
 
         # Calculate exact location of wall hit via linear interpolation
@@ -69,7 +70,9 @@ class SampleCell:
         zhit = z1 + (r3 - r1) / (r2-r4 + r3-r1)
 
         poshit = position + direction * (zhit - z_start)
-        
+        surfacenormal = [poshit[0], poshit[1], 0]
+        refdir = 2 * np.dot(direction, surfacenormal) * surfacenormal - direction
+
         
 
         
