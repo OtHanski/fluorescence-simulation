@@ -62,7 +62,17 @@ class SampleCell:
             r_path[:z_index] =  np.sqrt(pos_path[:z_index,0]**2 + pos_path[:z_index,1]**2)
 
         # Calculate exact location of wall hit via linear interpolation
-        idhit = np.argwhere(np.diff(np.sign(r_path - self.r)) != 0)
+        # First, locate the index of the wall hit
+        idhits = np.argwhere(np.diff(np.sign(r_path - self.r)) != 0)
+
+        # If no wall hit, return the position and direction of the photon plus the exit status (true)
+        if len(idhits) == 0:
+            if z_dir:
+                return [pos_path[-1,0], pos_path[-1,1], self.z[-1]], direction, True
+            else:
+                return [pos_path[0,0], pos_path[0,1], self.z[0]], direction, True
+        # idhits returns all "hits", we only want first one.
+        idhit = idhits[0][0]
 
         r1, r2 = r_path[idhit], r_path[idhit+1]
         r3, r4 = self.r[idhit], self.r[idhit+1]
@@ -72,6 +82,9 @@ class SampleCell:
         poshit = position + direction * (zhit - z_start)
         surfacenormal = [poshit[0], poshit[1], 0]
         refdir = 2 * np.dot(direction, surfacenormal) * surfacenormal - direction
+
+        # Return the new position and direction, as well as the no-exit status
+        return poshit, refdir, False
 
         
 
