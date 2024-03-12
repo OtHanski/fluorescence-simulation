@@ -11,14 +11,23 @@ Test the SampleCell class:
 import numpy as np
 import math
 
-from ../SampleCell import SampleCell
+from SampleCell import SampleCell
+
+# settings
+test_cell = 1
+
 
 def test_SampleCell():
-    z = np.linspace(0,10,100)
-    r = np.ones(100)
-    cell = SampleCell(z, r)
+    samples = 100
+    z = np.linspace(0,10,samples)
+    r = np.ones(samples)
+    cell = SampleCell(z, r, samples = 100)
 
-    print(cell.wall)
-    print(cell.hit_wall([0,0,5], [0,0,1]))
-    print(cell.hit_wall([0,0,5], [0,0,-1]))
-    print(cell.hit_wall([0,0,5], [1,1,1]))
+    print(f"Cell wall angle: {cell.wall}")
+    print(cell.hit_wall(np.array([0,0,5]), np.array([0,0,1])))
+    print(cell.hit_wall(np.array([0,0,5]), np.array([0,0,-1])))
+    print(cell.hit_wall(np.array([0,0,5]), np.array([1,1,1])))
+
+if __name__ == "__main__":
+    if test_cell == 1:
+        test_SampleCell()

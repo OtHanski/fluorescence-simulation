@@ -54,11 +54,12 @@ class SampleCell:
         # Construct the r coordinates of the photon path
         r_path = np.zeros((self.samp))
         pos_path = np.zeros((self.samp,3))
+        pos_array = np.tile(position, (self.samp,1))
         if z_dir:
-            pos_path[z_index:] = position + transit * (self.z[z_index:] - z_start)
+            pos_path[z_index:] = pos_array[z_index:] + transit * (self.z[z_index:].reshape(-1,1) - z_start)
             r_path[z_index:] =  np.sqrt(pos_path[z_index:,0]**2 + pos_path[z_index:,1]**2)
         else:
-            pos_path[:z_index] = position - transit * (z_start - self.z[:z_index])
+            pos_path[z_index:] = pos_array[z_index:] - transit * (self.z[z_index:].reshape(-1,1) - z_start)
             r_path[:z_index] =  np.sqrt(pos_path[:z_index,0]**2 + pos_path[:z_index,1]**2)
 
         # Calculate exact location of wall hit via linear interpolation
@@ -80,7 +81,7 @@ class SampleCell:
         zhit = z1 + (r3 - r1) / (r2-r4 + r3-r1)
 
         poshit = position + direction * (zhit - z_start)
-        surfacenormal = [poshit[0], poshit[1], 0]
+        surfacenormal = np.array([poshit[0], poshit[1], 0])
         refdir = 2 * np.dot(direction, surfacenormal) * surfacenormal - direction
 
         # Return the new position and direction, as well as the no-exit status
