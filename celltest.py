@@ -23,7 +23,7 @@ from photon import Photon
 
 # settings
 test_cell = 1
-timetest = 0
+timetest = 1
 photontest = 0
 
 
@@ -58,7 +58,8 @@ def test_SampleCell():
     # Test the photon class
     if photontest:
         # TODO later, when photon class is implemented
-        photon = Photon()
+        for i in range(100):
+            photon = Photon()
 
 if __name__ == "__main__":
     if test_cell == 1:
