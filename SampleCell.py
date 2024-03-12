@@ -56,7 +56,7 @@ class SampleCell:
         pos_path = np.zeros((self.samp,3))
         pos_array = np.tile(position, (self.samp,1))
         if z_dir:
-            pos_path[z_index:] = pos_array[z_index:] + transit * (self.z[z_index:].reshape(-1,1) - z_start)
+            pos_path[z_index+1:] = pos_array[z_index+1:] + transit * (self.z[z_index+1:].reshape(-1,1) - z_start)
             r_path[z_index:] =  np.sqrt(pos_path[z_index:,0]**2 + pos_path[z_index:,1]**2)
         else:
             pos_path[z_index:] = pos_array[z_index:] - transit * (self.z[z_index:].reshape(-1,1) - z_start)
@@ -76,13 +76,13 @@ class SampleCell:
         idhit = idhits[0][0]
 
         r1, r2 = r_path[idhit], r_path[idhit+1]
-        r3, r4 = self.r[idhit], self.r[idhit+1]
-        z1 = self.z[idhit]
-        zhit = z1 + (r3 - r1) / (r2-r4 + r3-r1)
+        w1, w2 = self.r[idhit], self.r[idhit+1]
+        z1, z2 = self.z[idhit], self.z[idhit+1]
+        zhit = z1 + ((w1 - r1) * (z2 - z1)) / (r2 - r1 - w2 + w1)
 
-        poshit = position + direction * (zhit - z_start)
+        poshit = position + transit * (zhit - z_start)
         surfacenormal = np.array([poshit[0], poshit[1], 0])
-        refdir = 2 * np.dot(direction, surfacenormal) * surfacenormal - direction
+        refdir = direction - 2 * np.dot(direction, surfacenormal) * surfacenormal
 
         # Return the new position and direction, as well as the no-exit status
         return poshit, refdir, False

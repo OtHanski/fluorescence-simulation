@@ -22,26 +22,36 @@ end of cell is reached or photon absorbed.
 
 Upon hitting either end of the tube, record exit position and angle.
 """
+from SampleCell import SampleCell
+import numpy as np
 
 class Photon:
-    def __init__(self, z, theta, phi, wavelength):
-        self.z = z
-        self.theta = theta
-        self.phi = phi
+    def __init__(self, 
+                 position: np.ndarray = np.array([0,0,1]), 
+                 direction: np.ndarray = np.array([0,0,1]),  
+                 wavelength: float = 121E-9,
+                 pabs:float = 0.02, 
+                 pdet:float = 0.5):
+        # Initialize photon parameters
+        self.pos = position
+        self.direction: np.ndarray = direction
         self.wavelength = wavelength
-        self.absorption_probability = 0.5
-        self.detection_probability = 0.5
+        self.absorption_probability = pabs
+        self.detection_probability = pdet
         self.absorbed = False
         self.detected = False
         self.reflected = False
         self.bounces = 0
 
-    def simulate(self, samplecell):
+    def simulate(self):
         # Samplecell should be a class with definition of cell geometry and reflectivity values.
         pass
 
-    def specular_reflection(self, samplecell):
+    def specular_reflection(self):
         pass
 
-    def diffuse_reflection(self, samplecell):
+    def diffuse_reflection(self):
+        pass
+
+    def absorption(self):
         pass
