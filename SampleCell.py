@@ -22,7 +22,28 @@ import numpy as np
 import math
 
 class SampleCell:
-    def __init__(self, z, r, samples = 1000):
+    def __init__(self, 
+                 z: np.ndarray, 
+                 r: np.ndarray, 
+                 specrefl: np.ndarray,
+                 diffrefl: np.ndarray,
+                 absprob: np.ndarray,
+                 WLconversion: np.ndarray,
+                 wavelengths: np.ndarray = np.array([121.567E-9, 450E-9]),
+                 samples: int = 1000
+                 ):
+        """
+        z and r should be a numpy arrays of length samples, defining the sample cell
+        wall profile as a radius r(z). 
+
+        wavelengths should define the wavelengths being simulated
+
+        specrefl, diffrefl, WLconversion and absprob should be numpy arrays of length samples-1, 
+        defining the specular reflection, diffuse reflection and absorption probabilities as a 
+        function of z (samples-1 because we only have n-1 wall pieces in a n-sample cell).
+        
+        """
+
         self.z = z
         self.dz = z[1] - z[0]
         self.r = r
@@ -87,9 +108,6 @@ class SampleCell:
         # Return the new position and direction, as well as the no-exit status
         return poshit, refdir, False
 
-        
-
-        
     def get_z_index(self, z):
         # Return the index of z in the z array
         

@@ -29,7 +29,7 @@ class Photon:
     def __init__(self, 
                  position: np.ndarray = np.array([0,0,1]), 
                  direction: np.ndarray = np.array([0,0,1]),  
-                 wavelength: float = 121E-9,
+                 wavelength: float = 121.567E-9,
                  pabs:float = 0.02, 
                  pdet:float = 0.5):
         # Initialize photon parameters
