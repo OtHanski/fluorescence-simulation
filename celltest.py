@@ -55,6 +55,7 @@ def test_SampleCell():
     test4 = cell.hit_wall(np.array([0,0,5]), np.array([1,2,2]))
     print(f"\nTest for direction [1,2,2]\nHit location: {test4[0]}, \ndirection: {test4[1]}, \nexit status: {test4[2]}")
 
+    # Test the photon class
     if photontest:
         # TODO later, when photon class is implemented
         photon = Photon()
