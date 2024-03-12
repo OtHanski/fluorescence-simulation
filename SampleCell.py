@@ -62,7 +62,7 @@ class SampleCell:
         for i in range(self.samp-1):
             self.wall[i] = np.arctan((r[i+1]-r[i])/(z[i+1]-z[i]))
     
-    def hit_wall(self, position = [0,0,0], direction = [1,1,1]):
+    def hit_wall(self, position = [0,0,0], direction = [1,1,1], wavelength:str = "450E-9"):
         # Check location of wall hit, return exit status, new position and (specular) direction.
         # If the photon exits out of either end of the cell, return the exit location and direction.
         # Direction should be a unit vector of the form [dx,dy,dz] for easy calculations. 
@@ -87,7 +87,7 @@ class SampleCell:
             pos_path[z_index+1:] = pos_array[z_index+1:] + transit * (self.z[z_index+1:].reshape(-1,1) - z_start)
             r_path[z_index:] =  np.sqrt(pos_path[z_index:,0]**2 + pos_path[z_index:,1]**2)
         else:
-            pos_path[z_index:] = pos_array[z_index:] - transit * (self.z[z_index:].reshape(-1,1) - z_start)
+            pos_path[:z_index-1] = pos_array[:z_index-1] - transit * (self.z[:z_index-1].reshape(-1,1) - z_start)
             r_path[:z_index] =  np.sqrt(pos_path[:z_index,0]**2 + pos_path[:z_index,1]**2)
 
         # Calculate exact location of wall hit via linear interpolation
@@ -97,9 +97,9 @@ class SampleCell:
         # If no wall hit, return the position and direction of the photon plus the exit status (true)
         if len(idhits) == 0:
             if z_dir:
-                return [pos_path[-1,0], pos_path[-1,1], self.z[-1]], direction, True
+                return np.array([pos_path[-1,0], pos_path[-1,1], self.z[-1]]), direction, True, "exit"
             else:
-                return [pos_path[0,0], pos_path[0,1], self.z[0]], direction, True
+                return np.array([pos_path[0,0], pos_path[0,1], self.z[0]]), direction, True, "exit"
         # idhits returns all "hits", we only want first one.
         idhit = idhits[0][0]
 
@@ -112,8 +112,15 @@ class SampleCell:
         surfacenormal = np.array([poshit[0], poshit[1], 0])
         refdir = direction - 2 * np.dot(direction, surfacenormal) * surfacenormal
 
+        # Resolve whether the photon reflects, absorbs or converts
+        event = np.random.choice(["specular", "diffuse", "absorption", "conversion"],
+                                 p = [self.specular_probability[wavelength][z_index], 
+                                      self.diffuse_probability[wavelength][z_index], 
+                                      self.absorption_probability[wavelength][z_index], 
+                                      self.WLconversion[wavelength][z_index]])
+
         # Return the new position and direction, as well as the no-exit status
-        return poshit, refdir, False
+        return poshit, refdir, False, event
 
     def get_z_index(self, z):
         # Return the index of z in the z array
