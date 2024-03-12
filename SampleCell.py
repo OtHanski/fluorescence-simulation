@@ -25,11 +25,11 @@ class SampleCell:
     def __init__(self, 
                  z: np.ndarray, 
                  r: np.ndarray, 
-                 specrefl: np.ndarray,
-                 diffrefl: np.ndarray,
-                 absprob: np.ndarray,
-                 WLconversion: np.ndarray,
-                 wavelengths: np.ndarray = np.array([121.567E-9, 450E-9]),
+                 specrefl: dict = {"121.567E-9": np.zeros(1000)+0.25, "450E-9": np.zeros(1000)+0.98},
+                 diffrefl: dict = {"121.567E-9": np.zeros(1000), "450E-9": np.zeros(1000)},
+                 absprob: dict = {"121.567E-9": np.zeros(1000)+0.25, "450E-9": np.zeros(1000)+0.02},
+                 WLconversion: dict = {"121.567E-9": np.zeros(1000)+0.5, "450E-9": np.zeros(1000)},
+                 wavelengths: np.ndarray = np.array(["121.567E-9", "450E-9"]),
                  samples: int = 1000
                  ):
         """
@@ -38,19 +38,26 @@ class SampleCell:
 
         wavelengths should define the wavelengths being simulated
 
-        specrefl, diffrefl, WLconversion and absprob should be numpy arrays of length samples-1, 
-        defining the specular reflection, diffuse reflection and absorption probabilities as a 
-        function of z (samples-1 because we only have n-1 wall pieces in a n-sample cell).
-        
+        specrefl, diffrefl, WLconversion and absprob should be dictionaries including wavelength 
+        specific arrays of length samples-1, defining the specular reflection, diffuse reflection 
+        and absorption probabilities as a function of z (samples-1 because we only have n-1 wall 
+        pieces in a n-sample cell).
         """
 
         self.z = z
         self.dz = z[1] - z[0]
         self.r = r
         self.samp = samples
+        self.wavelengths = wavelengths
 
         # Calculate the angle of the wall against the z-axis
         self.wall = np.zeros(self.samp-1)
+
+        # Define the probabilities of reflection and absorption
+        self.specular_probability = specrefl
+        self.diffuse_probability = diffrefl
+        self.absorption_probability = absprob
+        self.WLconversion = WLconversion
 
         for i in range(self.samp-1):
             self.wall[i] = np.arctan((r[i+1]-r[i])/(z[i+1]-z[i]))
@@ -119,16 +126,16 @@ class SampleCell:
 
     def get_wall_angle(self, z):
         # Return the angle of the wall at z
-        pass 
+        pass
 
-    def get_absorption_probability(self, wavelength):
+    def get_absorption_probability(self, wavelength,z):
         # Return the absorption probability for a given wavelength
-        return self.absorption_probability
+        return self.absorption_probability[wavelength][self.get_z_index(z)]
 
-    def get_specular_probability(self, wavelength):
+    def get_specular_probability(self, wavelength, z):
         # Return the specular reflection probability for a given wavelength
-        return self.specular_probability
+        return self.specular_probability[wavelength][self.get_z_index(z)]
 
-    def get_diffuse_probability(self, wavelength):
+    def get_diffuse_probability(self, wavelength, z):
         # Return the diffuse reflection probability for a given wavelength
-        return self.diffuse_probability
+        return self.diffuse_probability[wavelength][self.get_z_index(z)]
