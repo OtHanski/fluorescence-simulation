@@ -30,12 +30,13 @@ photontest = 0
 def test_SampleCell():
 
     # Generate a sample cell with straight cylindrical walls (r = 1, z = 10)
-    samples = 100
+    samples = 100000
     z = np.linspace(0,10,samples)
     r = np.ones(samples)
-    cell = SampleCell(z, r, samples = 100)
+    cell = SampleCell(z, r, samples = samples)
 
-    # Test execution time of hit_wall function with 10k iterations
+    # Test execution time of hit_wall function with 10k iterations 
+    # Seems to be O(samples) exec time, 0.45 ms for 10k samples, 5 ms for 100k samples
     if timetest:
         print("Testing execution time of hit_wall function")
         start_time = time.time()

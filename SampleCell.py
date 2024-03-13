@@ -25,10 +25,10 @@ class SampleCell:
     def __init__(self, 
                  z: np.ndarray, 
                  r: np.ndarray, 
-                 specrefl: dict = {"121.567E-9": np.zeros(1000)+0.25, "450E-9": np.zeros(1000)+0.98},
-                 diffrefl: dict = {"121.567E-9": np.zeros(1000), "450E-9": np.zeros(1000)},
-                 absprob: dict = {"121.567E-9": np.zeros(1000)+0.25, "450E-9": np.zeros(1000)+0.02},
-                 WLconversion: dict = {"121.567E-9": np.zeros(1000)+0.5, "450E-9": np.zeros(1000)},
+                 specrefl: dict = None,
+                 diffrefl: dict = None,
+                 absprob: dict = None,
+                 WLconversion: dict = None,
                  wavelengths: np.ndarray = np.array(["121.567E-9", "450E-9"]),
                  samples: int = 1000
                  ):
@@ -43,6 +43,15 @@ class SampleCell:
         and absorption probabilities as a function of z (samples-1 because we only have n-1 wall 
         pieces in a n-sample cell).
         """
+
+        if specrefl is None:
+            specrefl = {"121.567E-9": np.zeros(samples-1)+0.25, "450E-9": np.zeros(samples-1)+0.98}
+        if diffrefl is None:
+            diffrefl = {"121.567E-9": np.zeros(samples-1), "450E-9": np.zeros(samples-1)}
+        if absprob is None:
+            absprob = {"121.567E-9": np.zeros(samples-1)+0.25, "450E-9": np.zeros(samples-1)+0.02}
+        if WLconversion is None:
+            WLconversion = {"121.567E-9": np.zeros(samples-1)+0.5, "450E-9": np.zeros(samples-1)}
 
         self.z = z
         self.dz = z[1] - z[0]
