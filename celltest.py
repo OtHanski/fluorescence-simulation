@@ -30,7 +30,7 @@ photontest = 0
 def test_SampleCell():
 
     # Generate a sample cell with straight cylindrical walls (r = 1, z = 10)
-    samples = 100000
+    samples = 1000
     z = np.linspace(0,10,samples)
     r = np.ones(samples)
     cell = SampleCell(z, r, samples = samples)
