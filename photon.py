@@ -25,27 +25,58 @@ Upon hitting either end of the tube, record exit position and angle.
 from SampleCell import SampleCell
 import numpy as np
 
-class Photon:
+class photon:
     def __init__(self, 
+                 sampCell: SampleCell,
                  position: np.ndarray = np.array([0,0,1]), 
-                 direction: np.ndarray = np.array([0,0,1]),  
-                 wavelength: float = 121.567E-9,
-                 pabs:float = 0.02, 
-                 pdet:float = 0.5):
+                 direction: np.ndarray = None, 
+                 wavelength: str = "121.567E-9",
+                 absP: float = 0.02, 
+                 detP: float = 0.5):
         # Initialize photon parameters
+        self.sampCell = sampCell
         self.pos = position
-        self.direction: np.ndarray = direction
+        #Unit vector in random direction if no input direction
+        if direction:
+            self.direction: np.ndarray = direction
+        else:
+            pm = np.array([-1, 1])
+            direc = np.random.rand(3)
+            length = np.sqrt(direc[0]**2 + direc[1]**2 + direc[2]**2)
+            x1 = np.random.choice(pm) * direc[0] / length
+            x2 = np.random.choice(pm) * direc[1] / length
+            x3 = np.random.choice(pm) * direc[2] / length
+            self.direction: np.ndarray = np.array([x1, x2, x3])
+            
         self.wavelength = wavelength
-        self.absorption_probability = pabs
-        self.detection_probability = pdet
+        self.absorption_probability = absP
+        self.detection_probability = detP
         self.absorbed = False
         self.detected = False
         self.reflected = False
         self.bounces = 0
 
     def simulate(self):
-        # Samplecell should be a class with definition of cell geometry and reflectivity values.
-        pass
+        """Simulates photon in sampCell.
+        Returns (position, direction, num of wall interactions, exit/absorp)."""
+        while True:
+            hit = self.sampCell.hit_wall(self.pos, self.direction, self.wavelength)
+            if hit[2]:
+                return hit[0], hit[1], self.bounces, hit[3]
+            elif hit[3] == "specular" or "diffuse":
+                self.pos = hit[0]
+                self.direction = hit[1]
+                self.bounces += 1
+                continue
+            elif hit[3] == "conversion":
+                self.pos = hit[0]
+                self.direction = hit[1]
+                self.wavelength = "450E-9"
+                continue
+            elif hit[3] == "absorption":
+                return hit[0], hit[1], self.bounces, hit[3]
+            
+
 
     def specular_reflection(self):
         pass
