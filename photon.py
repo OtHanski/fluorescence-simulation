@@ -75,9 +75,7 @@ class photon:
                 continue
             elif hit[3] == "absorption":
                 return hit[0], hit[1], self.bounces, hit[3]
-            
-
-
+    
     def specular_reflection(self):
         pass
 
@@ -86,3 +84,11 @@ class photon:
 
     def absorption(self):
         pass
+
+
+def photonSave(fileName: str, data: list):
+    """Saves return values of simulate method (photon class) into a csv file with ';' as delimeter."""
+    with open(fileName, "a") as file:
+        file.write("position; direction; number of wall hits; event")
+        for point in data:
+            file.write(f"\n{point[0][0], point[0][1], point[0][2]}; {point[1][0], point[1][1], point[1][2]}; {point[2]}; {point[3]}")

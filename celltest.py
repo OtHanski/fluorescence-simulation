@@ -19,7 +19,7 @@ import time
 
 # Import the classes to be tested
 from SampleCell import SampleCell
-from photon import Photon
+from photon import photon
 
 # settings
 test_cell = 1

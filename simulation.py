@@ -11,7 +11,7 @@ Finally, plot data and results with pyplot.
 If you're *really* bored, multithread the operation :D
 """
 
-from photon import Photon
+from photon import photon
 from SampleCell import SampleCell
 
 ### Simulation settings ###
