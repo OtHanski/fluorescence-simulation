@@ -30,9 +30,7 @@ class photon:
                  sampCell: SampleCell,
                  position: np.ndarray = np.array([0,0,1]), 
                  direction: np.ndarray = None, 
-                 wavelength: str = "121.567E-9",
-                 absP: float = 0.02, 
-                 detP: float = 0.5):
+                 wavelength: str = "121.567E-9"):
         # Initialize photon parameters
         self.sampCell = sampCell
         self.pos = position
@@ -49,8 +47,6 @@ class photon:
             self.direction: np.ndarray = np.array([x1, x2, x3])
             
         self.wavelength = wavelength
-        self.absorption_probability = absP
-        self.detection_probability = detP
         self.absorbed = False
         self.detected = False
         self.reflected = False
@@ -58,23 +54,32 @@ class photon:
 
     def simulate(self):
         """Simulates photon in sampCell.
-        Returns (position, direction, num of wall interactions, exit/absorp)."""
+        Returns (position, direction, num of wall interactions, wavelength, exit/absorp)."""
         while True:
-            hit = self.sampCell.hit_wall(self.pos, self.direction, self.wavelength)
-            if hit[2]:
-                return hit[0], hit[1], self.bounces, hit[3]
-            elif hit[3] == "specular" or "diffuse":
+            hit = self.sampCell.hit_wall(position=self.pos, direction=self.direction, wavelength=self.wavelength)
+            if hit[3] == "exit":
+                #print("EXIT")
+                return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
+            elif hit[3] == "specular":
+                #print("SPEC")
                 self.pos = hit[0]
                 self.direction = hit[1]
                 self.bounces += 1
-                continue
+            elif hit[3] == "diffuse":
+                #print("DIFF")
+                self.pos = hit[0]
+                self.direction = hit[1]
+                self.bounces += 1
             elif hit[3] == "conversion":
+                #print("CONVERSION")
                 self.pos = hit[0]
                 self.direction = hit[1]
                 self.wavelength = "450E-9"
-                continue
+                self.bounces += 1
             elif hit[3] == "absorption":
-                return hit[0], hit[1], self.bounces, hit[3]
+                #print("ABSORPTION")
+                self.bounces += 1
+                return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
     
     def specular_reflection(self):
         pass
@@ -89,6 +94,6 @@ class photon:
 def photonSave(fileName: str, data: list):
     """Saves return values of simulate method (photon class) into a csv file with ';' as delimeter."""
     with open(fileName, "a") as file:
-        file.write("position; direction; number of wall hits; event")
+        file.write("position; direction; number of wall hits; wavelength; event")
         for point in data:
-            file.write(f"\n{point[0][0], point[0][1], point[0][2]}; {point[1][0], point[1][1], point[1][2]}; {point[2]}; {point[3]}")
+            file.write(f"\n{point[0][0], point[0][1], point[0][2]}; {point[1][0], point[1][1], point[1][2]}; {point[2]}; {point[3]}; {point[4]}")

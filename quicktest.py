@@ -6,10 +6,12 @@ import numpy as np
 
 samp = SampleCell(np.linspace(0, 10, 100), np.ones(100), samples=100)
 
+pos = np.array([0, 0, 5])
+
 results = []
 
 for i in range(10):
-    phot = photon(samp)
+    phot = photon(sampCell=samp, position=pos)
     result = phot.simulate()
     results.append(result)
 
