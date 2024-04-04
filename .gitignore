@@ -1,6 +1,9 @@
 # dataAnalysis
 dataAnalysis.py
 
+# PNG files
+*.png
+
 # CSV files
 *.csv
 

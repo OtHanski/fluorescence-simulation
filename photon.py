@@ -36,7 +36,7 @@ class photon:
         self.pos = position
         #Unit vector in random direction if no input direction
         if direction:
-            self.direction: np.ndarray = direction
+            self.direction = direction
         else:
             pm = np.array([-1, 1])
             direc = np.random.rand(3)
