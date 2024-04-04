@@ -10,7 +10,7 @@ pos = np.array([0, 0, 5])
 
 results = []
 
-for i in range(10):
+for i in range(15):
     phot = photon(sampCell=samp, position=pos)
     result = phot.simulate()
     results.append(result)
