@@ -92,12 +92,15 @@ class SampleCell:
         r_path = np.zeros((self.samp))
         pos_path = np.zeros((self.samp,3))
         pos_array = np.tile(position, (self.samp,1))
+        print(f"\nPos array: {pos_array}\n")
         if z_dir:
             pos_path[z_index+1:] = pos_array[z_index+1:] + transit * (self.z[z_index+1:].reshape(-1,1) - z_start)
             r_path[z_index:] =  np.sqrt(pos_path[z_index:,0]**2 + pos_path[z_index:,1]**2)
         else:
             pos_path[:z_index-1] = pos_array[:z_index-1] - transit * (self.z[:z_index-1].reshape(-1,1) - z_start)
             r_path[:z_index] =  np.sqrt(pos_path[:z_index,0]**2 + pos_path[:z_index,1]**2)
+            print(f"\nOriginals: {pos_path[:z_index,0]}\n{pos_path[:z_index,1]}\n")
+            print(pos_path[:z_index,0]**2, pos_path[:z_index,1]**2)
 
         # Calculate exact location of wall hit via linear interpolation
         # First, locate the index of the wall hit

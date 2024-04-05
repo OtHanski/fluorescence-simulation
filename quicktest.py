@@ -3,16 +3,17 @@ from photon import photon
 from photon import photonSave
 import numpy as np
 
-
-samp = SampleCell(np.linspace(0, 10, 1000), np.ones(1000), samples=1000)
+samples = 50
+samp = SampleCell(np.linspace(0, 10, samples), np.ones(samples), samples=samples)
 
 pos = np.array([0, 0, 5])
 
 results = []
 
-for i in range(10000):
+for i in range(10):
     try:
         phot = photon(sampCell=samp, position=pos)
+        print(f"Simulating photon;\n{phot.pos}\n{phot.direction}\n")
         result = phot.simulate()
         results.append(result)
     except:
