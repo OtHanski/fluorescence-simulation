@@ -34,46 +34,51 @@ class photon:
         # Initialize photon parameters
         self.sampCell = sampCell
         self.pos = position
+    
         #Unit vector in random direction if no input direction
-        if direction:
-            self.direction = direction
-        else:
+        if direction is None:
             pm = np.array([-1, 1])
             direc = np.random.rand(3)
             length = np.sqrt(direc[0]**2 + direc[1]**2 + direc[2]**2)
             x1 = np.random.choice(pm) * direc[0] / length
             x2 = np.random.choice(pm) * direc[1] / length
             x3 = np.random.choice(pm) * direc[2] / length
-            self.direction: np.ndarray = np.array([x1, x2, x3])
+            self.direc: np.ndarray = np.array([x1, x2, x3])
+        else:
+            self.direc = direction
             
         self.wavelength = wavelength
         self.absorbed = False
         self.detected = False
         self.reflected = False
         self.bounces = 0
+        
+
+    def getDir(self):
+        return self.direc
 
     def simulate(self):
         """Simulates photon in sampCell.
         Returns (position, direction, num of wall interactions, wavelength, exit/absorp)."""
         while True:
-            hit = self.sampCell.hit_wall(position=self.pos, direction=self.direction, wavelength=self.wavelength)
+            hit = self.sampCell.hit_wall(position=self.pos, direction=self.direc, wavelength=self.wavelength)
             if hit[3] == "exit":
                 #print("EXIT")
                 return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
             elif hit[3] == "specular":
                 #print("SPEC")
                 self.pos = hit[0]
-                self.direction = hit[1]
+                self.direc = hit[1]
                 self.bounces += 1
             elif hit[3] == "diffuse":
                 #print("DIFF")
                 self.pos = hit[0]
-                self.direction = hit[1]
+                self.direc = hit[1]
                 self.bounces += 1
             elif hit[3] == "conversion":
                 #print("CONVERSION")
                 self.pos = hit[0]
-                self.direction = hit[1]
+                self.direc = hit[1]
                 self.wavelength = "450E-9"
                 self.bounces += 1
             elif hit[3] == "absorption":
