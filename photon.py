@@ -35,7 +35,7 @@ class photon:
         self.sampCell = sampCell
         self.pos = position
     
-        #Unit vector in random direction if no input direction
+        # Unit vector in random direction if no input direction
         if direction is None:
             pm = np.array([-1, 1])
             direc = np.random.rand(3)
@@ -62,25 +62,20 @@ class photon:
         while True:
             hit = self.sampCell.hit_wall(position=self.pos, direction=self.direc, wavelength=self.wavelength)
             if hit[3] == "exit":
-                #print("EXIT")
                 return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
             elif hit[3] == "specular":
-                #print("SPEC")
                 self.pos = hit[0]
                 self.direc = hit[1]
                 self.bounces += 1
             elif hit[3] == "diffuse":
-                #print("DIFF")
                 self.pos = hit[0]
                 self.direc = hit[1]
                 self.bounces += 1
             elif hit[3] == "conversion":
-                #print("CONVERSION")
                 self.pos = hit[0]
                 self.direc = hit[1]
                 self.wavelength = "450E-9"
                 self.bounces += 1
             elif hit[3] == "absorption":
-                #print("ABSORPTION")
                 self.bounces += 1
                 return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
