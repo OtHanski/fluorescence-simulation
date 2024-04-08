@@ -8,7 +8,7 @@ diffrefl = {"121.567E-9": np.zeros(1000-1), "450E-9": np.zeros(1000-1)}
 absprob = {"121.567E-9": np.zeros(1000-1), "450E-9": np.zeros(1000-1)+0.02}
 WLconversion = {"121.567E-9": np.zeros(1000-1), "450E-9": np.zeros(1000-1)}
 
-samp = SampleCell(np.linspace(0, 10, 1000), np.ones(1000), samples=1000, specrefl=specrefl, diffrefl=diffrefl, absprob=absprob, WLconversion=WLconversion)
+samp = SampleCell(np.linspace(0, 10, 1000), np.ones(1000), samples=1000)
 
 pos = np.array([0, 0, 5])
 
@@ -20,7 +20,7 @@ totalPhot2 = 0
 dirrrr: np.ndarray = np.array([0.30960542, -0.09976733, -0.94561671])
 negdirs1 = []
 negdirs2 = []
-for i in range(1000):
+for i in range(100):
     phot = photon(sampCell=samp, position=pos)
     negdirs1.append(phot.getDir())
     try:
@@ -38,8 +38,8 @@ for i in range(1000):
         continue
 #print(negdirs1, "\n", negdirs2)
 
-print("z neg before:", negdirBefore, "\nz neg after:", negdirAfter, "\nPercentage died:", 100 - negdirAfter/negdirBefore*100)
-print("total:", totalPhot, totalPhot2)
+#print("z neg before:", negdirBefore, "\nz neg after:", negdirAfter, "\nPercentage died:", 100 - negdirAfter/negdirBefore*100)
+#print("total:", totalPhot, totalPhot2)
 
 good = []
 bad = []
@@ -58,4 +58,4 @@ for i in range(len(negdirs1)):
     
 
 
-saveData("./data/testData12.csv", results)
+#saveData("./data/testData3.csv", results)

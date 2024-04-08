@@ -60,7 +60,7 @@ def test_SampleCell():
     if photontest:
         # TODO later, when photon class is implemented
         for i in range(100):
-            photon = Photon()
+            photon = photon()
 
 if __name__ == "__main__":
     if test_cell == 1:
