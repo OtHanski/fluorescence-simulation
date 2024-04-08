@@ -104,100 +104,105 @@ def angleToNegZ(data: np.ndarray):
 
 #=======================CALCULATIONS============================================================================
 
-# HERE IS THE DATA :)
-data = readData(fileName=fileName) 
 
-# Save data of photons that reached bottom of sample cell
-exitPos = []
-wavelen = []
-for i in range(len(data["pos"])):
-    if data["event"][i].strip() == "exit":
-        if data["pos"][i][2] == 10.:
-            continue
+def main():
+    # HERE IS THE DATA :)
+    data = readData(fileName=fileName) 
+
+    # Save data of photons that reached bottom of sample cell
+    exitPos = []
+    wavelen = []
+    for i in range(len(data["pos"])):
+        if data["event"][i].strip() == "exit":
+            if data["pos"][i][2] == 10.:
+                continue
+            else:
+                exitPos.append(data["pos"][i])
+                wavelen.append(data["wavelength"][i])
+    exitPos = np.array(exitPos)
+    wavelen = np.array(wavelen)
+
+    # Percentage reached exit
+    totalPhotons = np.size(data["event"])
+    reachedBottom = len(exitPos)
+    percentage = 100 * reachedBottom / totalPhotons
+    print(f"{percentage} % reached $z$=0")
+
+    # uv and blue
+    uv = 0
+    blue = 0
+    for i in range(len(exitPos)):
+        if wavelen[i].strip() == "450E-9":
+            blue += 1
         else:
-            exitPos.append(data["pos"][i])
-            wavelen.append(data["wavelength"][i])
-exitPos = np.array(exitPos)
-wavelen = np.array(wavelen)
+            uv += 1
+    print("UV", uv, "\nBLUE", blue, f"\nCONVERTED {100*blue/len(exitPos):.1f} %")
 
-# Percentage reached exit
-totalPhotons = np.size(data["event"])
-reachedBottom = len(exitPos)
-percentage = 100 * reachedBottom / totalPhotons
-print(f"{percentage} % reached $z$=0")
+    # Cyl coordinate r
+    x = np.take(exitPos, 0, axis=1)
+    y = np.take(exitPos, 1, axis=1)
+    r = []
+    for i in range(len(x)):
+        rr = np.sqrt(x[i]**2 + y[i]**2)
+        r.append(rr)
+    r = np.array(r)
 
-# uv and blue
-uv = 0
-blue = 0
-for i in range(len(exitPos)):
-    if wavelen[i].strip() == "450E-9":
-        blue += 1
-    else:
-        uv += 1
-print("UV", uv, "\nBLUE", blue, f"\nCONVERTED {100*blue/len(exitPos):.1f} %")
+    # Normalize direction vectors
+    dirs = []
+    for i in range(len(data["dir"])):
+        if data["event"][i].strip() == "exit":
+            if data["pos"][i][2] == 10.:
+                continue
+            else:
+                length = np.sqrt(data["dir"][i][0]**2 + data["dir"][i][1]**2 + data["dir"][i][2]**2)
+                xdir = data["dir"][i][0] / length
+                ydir = data["dir"][i][1] / length
+                zdir = data["dir"][i][2] / length
+                dirlandaa = [xdir, ydir, zdir]
+                dirs.append(dirlandaa)
+    dirs = np.array(dirs)
 
-# Cyl coordinate r
-x = np.take(exitPos, 0, axis=1)
-y = np.take(exitPos, 1, axis=1)
-r = []
-for i in range(len(x)):
-    rr = np.sqrt(x[i]**2 + y[i]**2)
-    r.append(rr)
-r = np.array(r)
+    # Angles to neg z
+    ang = angleToNegZ(dirs) * (180/np.pi)
 
-# Normalize direction vectors
-dirs = []
-for i in range(len(data["dir"])):
-    if data["event"][i].strip() == "exit":
-        if data["pos"][i][2] == 10.:
-            continue
-        else:
-            length = np.sqrt(data["dir"][i][0]**2 + data["dir"][i][1]**2 + data["dir"][i][2]**2)
-            xdir = data["dir"][i][0] / length
-            ydir = data["dir"][i][1] / length
-            zdir = data["dir"][i][2] / length
-            dirlandaa = [xdir, ydir, zdir]
-            dirs.append(dirlandaa)
-dirs = np.array(dirs)
+    # Delete bad ppoints... Throw away when debugging done
+    for point in x:
+        if abs(point) > 1:
+            i = np.where(x==point)[0][0]
+            x = np.delete(x, i)
+            y = np.delete(y, i)
+            r = np.delete(r, i)
+            ang = np.delete(ang, i)
 
-# Angles to neg z
-ang = angleToNegZ(dirs) * (180/np.pi)
+    #=======================PLOTS===================================================================================0
 
-# Delete bad ppoints... Throw away when debugging done
-for point in x:
-    if abs(point) > 1:
-        i = np.where(x==point)[0][0]
-        x = np.delete(x, i)
-        y = np.delete(y, i)
-        r = np.delete(r, i)
-        ang = np.delete(ang, i)
+    if posDistributionPlot:
+        plt.figure(1)
+        plt.hist(r, range=(0, 1), bins=30, color='dimgrey', rwidth=0.75)
+        plt.xlabel("$r$ / R")
+        plt.ylabel("Number of photons")
+        plt.title("Photons exiting sample cell at $z$=0")
+        plt.text(0.05, 19.2, f"- {percentage:.1f} % of total photons \n  reached $z$=10\n\n- of which {100*blue/len(exitPos):.1f} % blue")
+        plt.tight_layout()
+        plt.savefig(posDistImName)
+        plt.show()
 
-#=======================PLOTS===================================================================================0
+    if angleDistributionPlot:
+        plt.figure(2)
+        plt.scatter(r, ang, s=20, marker='.', c="mediumorchid")
+        plt.xlabel("$r$ / R")
+        plt.ylabel("Angle / deg")
+        plt.title("Angles of photons at sample cell exit")
+        plt.tight_layout()
+        plt.savefig(angDistImName)
+        plt.show()
 
-if posDistributionPlot:
-    plt.figure(1)
-    plt.hist(r, range=(0, 1), bins=30, color='dimgrey', rwidth=0.75)
-    plt.xlabel("$r$ / R")
-    plt.ylabel("Number of photons")
-    plt.title("Photons exiting sample cell at $z$=0")
-    plt.text(0.05, 19.2, f"- {percentage:.1f} % of total photons \n  reached $z$=10\n\n- of which {100*blue/len(exitPos):.1f} % blue")
-    plt.tight_layout()
-    plt.savefig(posDistImName)
-    plt.show()
+    if topDownPlot:
+        plt.figure(3)
+        
 
-if angleDistributionPlot:
-    plt.figure(2)
-    plt.scatter(r, ang, s=20, marker='.', c="mediumorchid")
-    plt.xlabel("$r$ / R")
-    plt.ylabel("Angle / deg")
-    plt.title("Angles of photons at sample cell exit")
-    plt.tight_layout()
-    plt.savefig(angDistImName)
-    plt.show()
+    if wallHeatMapPlot:
+        pass
 
-if topDownPlot:
-    plt.figure(3)
-    
-
-if wallHeatMapPlot:
-    pass
+if __name__ == "__main__":
+    main()

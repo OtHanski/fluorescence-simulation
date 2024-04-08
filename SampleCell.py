@@ -71,7 +71,18 @@ class SampleCell:
         for i in range(self.samp-1):
             self.wall[i] = np.arctan((r[i+1]-r[i])/(z[i+1]-z[i]))
     
-    def hit_wall(self, position = [0,0,0], direction = [1,1,1], wavelength:str = "450E-9"):
+    def hit_wall(self, position = [0,0,0], direction = [1,1,1], wavelength:str = "450E-9", debug = 0):
+        """
+        Given a photon at position and direction, check if it hits the wall of the cell.
+
+        On a hit, calculate the event type and new position/direction.
+
+        Returns:
+            np.array([x,y,z]): new position of the photon
+            np.array([dx,dy,dz]): new direction of the photon
+            bool: exit status
+            str: event type
+        """
         # Check location of wall hit, return exit status, new position and (specular) direction.
         # If the photon exits out of either end of the cell, return the exit location and direction.
         # Direction should be a unit vector of the form [dx,dy,dz] for easy calculations. 
@@ -92,15 +103,19 @@ class SampleCell:
         r_path = np.zeros((self.samp))
         pos_path = np.zeros((self.samp,3))
         pos_array = np.tile(position, (self.samp,1))
-        print(f"\nPos array: {pos_array}\n")
+
+        if debug:
+            print(f"\nPos array: {pos_array}\n")
+
         if z_dir:
             pos_path[z_index+1:] = pos_array[z_index+1:] + transit * (self.z[z_index+1:].reshape(-1,1) - z_start)
             r_path[z_index:] =  np.sqrt(pos_path[z_index:,0]**2 + pos_path[z_index:,1]**2)
         else:
             pos_path[:z_index-1] = pos_array[:z_index-1] - transit * (self.z[:z_index-1].reshape(-1,1) - z_start)
             r_path[:z_index] =  np.sqrt(pos_path[:z_index,0]**2 + pos_path[:z_index,1]**2)
-            print(f"\nOriginals: {pos_path[:z_index,0]}\n{pos_path[:z_index,1]}\n")
-            print(pos_path[:z_index,0]**2, pos_path[:z_index,1]**2)
+            if debug:
+                print(f"\nOriginals: {pos_path[:z_index,0]}\n{pos_path[:z_index,1]}\n")
+                print(pos_path[:z_index,0]**2, pos_path[:z_index,1]**2)
 
         # Calculate exact location of wall hit via linear interpolation
         # First, locate the index of the wall hit
@@ -121,8 +136,6 @@ class SampleCell:
         zhit = z1 + ((w1 - r1) * (z2 - z1)) / (r2 - r1 - w2 + w1)
 
         poshit = position + transit * (zhit - z_start)
-        surfacenormal = np.array([poshit[0], poshit[1], 0])
-        refdir = direction - 2 * np.dot(direction, surfacenormal) * surfacenormal
 
         # Resolve whether the photon reflects, absorbs or converts
         event = np.random.choice(["specular", "diffuse", "absorption", "conversion"],
@@ -131,8 +144,23 @@ class SampleCell:
                                       self.absorption_probability[wavelength][z_index], 
                                       self.WLconversion[wavelength][z_index]])
 
-        # Return the new position and direction, as well as the no-exit status
-        return poshit, refdir, False, event
+        if event == "absorption":
+            # Absorbed photon should not have a new direction
+            return poshit, np.array([0,0,0]), False, event
+        
+        if event == "conversion":
+            # Convert wavelength, random direction
+            return poshit, self.random_direction(), False, event
+
+        if event == "diffuse":
+            # Random direction
+            return poshit, self.random_direction(), False, event
+        
+        if event == "specular":
+            # Reflect direction specularly
+            surfacenormal = np.array([poshit[0], poshit[1], 0])
+            refdir = direction - 2 * np.dot(direction, surfacenormal) * surfacenormal
+            return poshit, refdir, False, event
 
     def get_z_index(self, z):
         # Return the index of z in the z array
@@ -146,6 +174,11 @@ class SampleCell:
     def get_wall_angle(self, z):
         # Return the angle of the wall at z
         pass
+
+    def random_direction(self):
+        # Return a random direction vector
+        dir = (np.random.rand(3) * 2 - 1)
+        return dir/np.sqrt(dir.dot(dir))
 
     def get_absorption_probability(self, wavelength,z):
         # Return the absorption probability for a given wavelength
