@@ -53,7 +53,6 @@ class photon:
         self.reflected = False
         self.bounces = 0
         
-
     def getDir(self):
         return self.direc
 
@@ -85,22 +84,3 @@ class photon:
                 #print("ABSORPTION")
                 self.bounces += 1
                 return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
-    
-    def specular_reflection(self):
-        pass
-
-    def diffuse_reflection(self):
-        pass
-
-    def absorption(self):
-        pass
-
-
-def photonSave(fileName: str, data: list, sampCell: SampleCell = None):
-    """Saves return values of simulate method (photon class) into a csv file with ';' as delimeter."""
-    with open(fileName, "a") as file:
-        if sampCell:
-            pass #Save sample cell specs... to be implemented later
-        file.write("position; direction; number of wall hits; wavelength; event")
-        for point in data:
-            file.write(f"\n{point[0][0], point[0][1], point[0][2]}; {point[1][0], point[1][1], point[1][2]}; {point[2]}; {point[3]}; {point[4]}")

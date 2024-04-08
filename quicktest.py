@@ -1,6 +1,6 @@
 from SampleCell import SampleCell
 from photon import photon
-from photon import photonSave
+from dataAnalysis import saveData
 import numpy as np
 
 specrefl = {"121.567E-9": np.zeros(1000-1)+1, "450E-9": np.zeros(1000-1)+0.98}
@@ -20,7 +20,7 @@ totalPhot2 = 0
 dirrrr: np.ndarray = np.array([0.30960542, -0.09976733, -0.94561671])
 negdirs1 = []
 negdirs2 = []
-for i in range(100):
+for i in range(1000):
     phot = photon(sampCell=samp, position=pos)
     negdirs1.append(phot.getDir())
     try:
@@ -32,21 +32,30 @@ for i in range(100):
         if phot.getDir()[2] < 0:
             negdirAfter += 1
         totalPhot2 += 1
-        negdirs2.append(phot.getDir())
+        negdirs2.append("Good")
     except:
-        negdirs2.append(420.69)
+        negdirs2.append("Bad")
         continue
-print(negdirs1[0], "\n", negdirs2[0])
+#print(negdirs1, "\n", negdirs2)
 
 print("z neg before:", negdirBefore, "\nz neg after:", negdirAfter, "\nPercentage died:", 100 - negdirAfter/negdirBefore*100)
 print("total:", totalPhot, totalPhot2)
 
-#ERROR
-#line 126, in hit_wall
-#    p = [self.specular_probability[wavelength][z_index],
-#         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
-#IndexError: index 99 is out of bounds for axis 0 with size 99
+good = []
+bad = []
+for i in range(len(negdirs1)):
+    if negdirs2[i] == "Good":
+        if negdirs1[i][2] < 0:
+            good.append(negdirs1[i])
+        else:
+            continue
+    else:
+        bad.append(negdirs1[i])
+
+#print("GOOD\n", good)
+#print("BAD\n", bad)
+
     
 
 
-#photonSave("./data/testData11_2.csv", results)
+saveData("./data/testData12.csv", results)
