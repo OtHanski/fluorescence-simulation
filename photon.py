@@ -33,9 +33,9 @@ class photon:
                  direction: np.ndarray = np.array([0,0,0]), 
                  wavelength: str = "121.567E-9",
                  id = 0):
-        
+        # Debug flags
         self.debug = 0
-        self.logold = 1
+        self.logold = 0
 
         # Initialize photon parameters
         self.sampCell = sampCell
@@ -54,16 +54,10 @@ class photon:
             self.direc = self.sampCell.randomvec()
         
         self.wavelength = wavelength
-        self.absorbed = False
-        self.detected = False
-        self.reflected = False
         self.bounces = 0
         # self.event should reflect latest event
         # "exit", "absorption", "specular", "diffuse", "conversion"
         self.event = None
-
-        if self.debug:
-            print(f"Photon initialized at {self.pos} with direction {self.direc}")
         
     def getDir(self):
         return self.direc
@@ -82,10 +76,12 @@ class photon:
                                             wavelength=self.wavelength, debug = self.debug)
                 self.event = hit[3]
                 if hit[3] == "exit":
+                    """ Commented out to avoid excessive printouts, add back if problems arise
                     if self.debug: 
                         print(f"Photon exited at {hit[0]} with direction {hit[1]}, old event {self.oldevent}, old pos {self.oldpos}, old direc {self.olddirec}")
                     if ((hit[0] == np.array([0,0,0])).all() or (hit[0] == np.array([0,0,10])).all()): 
                         print(f"Photon exited at {hit[0]} with direction {hit[1]}, \nold event {self.oldevent}, old pos {self.oldpos}, old direc {self.olddirec}")
+                    """
                     self.pos = hit[0]
                     self.direc = hit[1]
                     return hit[0], hit[1], self.bounces, self.wavelength, hit[3]

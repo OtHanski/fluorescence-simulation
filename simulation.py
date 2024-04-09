@@ -11,6 +11,10 @@ Finally, plot data and results with pyplot.
 If you're *really* bored, multithread the operation :D
 """
 import numpy as np
+import traceback
+import time
+
+# Local modules
 from photon import photon
 from SampleCell import SampleCell
 import FileHandler as fh
@@ -73,20 +77,28 @@ def main(simulations = simulations, wall_sections = wall_sections, r_cell = r_ce
     with open(filepath, "w") as f:
         f.write("pos(x,y,z),dir(dx,dy,dz),bounces,wavelength,event\n")
     # Simulate the photons
+    starttime = time.time()
     for i in range(simulations):
         # Generate a random point in the gas cloud
         if (i+1) % min(int(simulations/10), 25000) == 0:
-            print(f"\nSimulating photon {i+1}/{simulations}")
+            print(f"\nSimulating photon {i+1}/{simulations}, time elapsed: {time.time()-starttime:.2f}s\n")
         pos = randomGasPoint()
         phot = photon(sampCell=cell, position=pos, id = i+1)
-        #try:
-        result = phot.simulate()
-        # Append result to file
-        fh.WriteDat(filepath = filepath, 
-                    string_to_write = phot.data_to_string()+"\n", 
-                    writemode = "a")
-        #except:
-            #continue
+        writestr = ""
+        try:
+            result = phot.simulate()
+            writestr += phot.data_to_string()+"\n"
+            # Append results to file every 10 photons (save IO time)
+            if (i+1) % 10 == 0:
+                fh.WriteDat(filepath = filepath, 
+                            string_to_write = phot.data_to_string()+"\n", 
+                            writemode = "a")
+                writestr = ""
+        except Exception as e:
+            print(f"Error at photon {i+1}: {e}")
+            print(traceback.format_exc())
+            continue
+    print(f"Simulation of {simulations} photons completed in {time.time()-starttime:.2f}s\n")
     
 
 
