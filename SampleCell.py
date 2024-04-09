@@ -144,10 +144,10 @@ class SampleCell:
 
         # Resolve whether the photon reflects, absorbs or converts
         event = np.random.choice(["specular", "diffuse", "absorption", "conversion"],
-                                 p = [self.specular_probability[wavelength][z_index], 
-                                      self.diffuse_probability[wavelength][z_index], 
-                                      self.absorption_probability[wavelength][z_index], 
-                                      self.WLconversion[wavelength][z_index]])
+                                 p = [self.specular_probability[wavelength][z_index-1], 
+                                      self.diffuse_probability[wavelength][z_index-1], 
+                                      self.absorption_probability[wavelength][z_index-1], 
+                                      self.WLconversion[wavelength][z_index-1]])
 
         if event == "absorption":
             # Absorbed photon should not have a new direction

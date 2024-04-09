@@ -24,6 +24,7 @@ Upon hitting either end of the tube, record exit position and angle.
 """
 from SampleCell import SampleCell
 import numpy as np
+import traceback
 
 class photon:
     def __init__(self, 
@@ -106,7 +107,7 @@ class photon:
                     self.direc = hit[1]
                     return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
         except Exception as e:
-            print(e)
+            print(traceback.format_exc())
             print(self)
             return None
 
