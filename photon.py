@@ -28,30 +28,28 @@ import numpy as np
 class photon:
     def __init__(self, 
                  sampCell: SampleCell,
-                 position: np.ndarray = None, 
-                 direction: np.ndarray = None, 
-                 wavelength: str = "121.567E-9"):
+                 position: np.ndarray = np.array([np.nan,np.nan,np.nan]), 
+                 direction: np.ndarray = np.array([0,0,0]), 
+                 wavelength: str = "121.567E-9",
+                 id = 0):
         
-        self.debug = 1
+        self.debug = 0
 
-        if self.debug:
-            print("Starting photon init")
         # Initialize photon parameters
         self.sampCell = sampCell
+        self.id = id
 
         # If no input position, then initialize at cell center
-        if position is None:
+        if np.nan in position:
             self.pos = sampCell.z[int(sampCell.samp/2)] 
         else:
             self.pos = position
-        # Unit vector in random direction if no input direction
+
         self.direc = direction
-        
-        # In order to avoid zero vectors, generate new direction until valid
-        while self.direc == None:
-            self.direc = (np.random.rand(3) * 2 - 1)
-            if not np.any(self.direc):
-                self.direc /= np.sqrt(self.direc.dot(self.direc))
+        # Unit vector in random direction if no input direction
+        if np.all(self.direc == 0):
+            # Use the sample cell function for proper random gen
+            self.direc = self.sampCell.randomvec()
         
         self.wavelength = wavelength
         self.absorbed = False
@@ -63,7 +61,7 @@ class photon:
         self.event = None
 
         if self.debug:
-            print("Photon initialized")
+            print(f"Photon initialized at {self.pos} with direction {self.direc}")
         
     def getDir(self):
         return self.direc
@@ -71,37 +69,44 @@ class photon:
     def simulate(self):
         """Simulates photon in sampCell.
         Returns (position, direction, num of wall interactions, wavelength, exit/absorp)."""
-        while True:
-            hit = self.sampCell.hit_wall(position=self.pos, direction=self.direc, wavelength=self.wavelength)
-            self.event = hit[3]
-            if hit[3] == "exit":
-                self.pos = hit[0]
-                self.direc = hit[1]
-                return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
-            elif hit[3] == "specular":
-                self.pos = hit[0]
-                self.direc = hit[1]
-                self.bounces += 1
-            elif hit[3] == "diffuse":
-                self.pos = hit[0]
-                self.direc = hit[1]
-                self.bounces += 1
-            elif hit[3] == "conversion":
-                self.pos = hit[0]
-                self.direc = hit[1]
-                self.wavelength = "450E-9"
-                self.bounces += 1
-            elif hit[3] == "absorption":
-                self.pos = hit[0]
-                self.direc = hit[1]
-                return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
+        try:
+            while True:
+                hit = self.sampCell.hit_wall(position=self.pos, direction=self.direc, 
+                                            wavelength=self.wavelength, debug = self.debug)
+                self.event = hit[3]
+                if hit[3] == "exit":
+                    if self.debug: print(f"Photon exited at {hit[0]} with direction {hit[1]}")
+                    self.pos = hit[0]
+                    self.direc = hit[1]
+                    return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
+                elif hit[3] == "specular":
+                    self.pos = hit[0]
+                    self.direc = hit[1]
+                    self.bounces += 1
+                elif hit[3] == "diffuse":
+                    self.pos = hit[0]
+                    self.direc = hit[1]
+                    self.bounces += 1
+                elif hit[3] == "conversion":
+                    self.pos = hit[0]
+                    self.direc = hit[1]
+                    self.wavelength = "450E-9"
+                    self.bounces += 1
+                elif hit[3] == "absorption":
+                    self.pos = hit[0]
+                    self.direc = hit[1]
+                    return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
+        except Exception as e:
+            print(e)
+            print(self)
+            return None
 
 
     def data_to_string(self):
         return f"{self.pos}\t{self.direc}\t{self.bounces}\t{self.wavelength}\t{self.event}"
 
     def __repr__(self):
-        return f"Photon at {self.pos} with direction {self.direc} and wavelength {self.wavelength}. Latest event {self.event}."
+        return f"Photon {self.id} at {self.pos} with direction {self.direc} and wavelength {self.wavelength}. Latest event {self.event}."
     
     def __str__(self):
         return self.__repr__()

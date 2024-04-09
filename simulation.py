@@ -16,14 +16,17 @@ from SampleCell import SampleCell
 import FileHandler as fh
 
 ### Simulation settings ###
+filename = "simulation.dat"
 # Number of particles to simulate
-simulations = 100
+simulations = 1000
 # Number of wall sections to divide the cell into (1 to n)
-wall_sections = 100
+wall_sections = 150
 # Cell parameters:
 shape = "cylinder"
 r_cell = 5E-3 # Radius of the cell [m]
 l_cell = 100E-3 # Length of the cell [m]
+r_cell = 1
+l_cell = 10
 # Gas cloud parameters:
 gas_height = 10E-3 # Height of the gas cloud [m]
 gas_offset = 5E-3 # Offset of the gas cloud from the cell bottom [m]
@@ -66,24 +69,24 @@ def main(simulations = simulations, wall_sections = wall_sections, r_cell = r_ce
 
     print(f"Beginning simulation of {simulations} photons")
     
-    filepath = "./data/simulation.dat"
+    filepath = f"./data/{filename}"
     with open(filepath, "w") as f:
         f.write("pos(x,y,z),dir(dx,dy,dz),bounces,wavelength,event\n")
     # Simulate the photons
     for i in range(simulations):
         # Generate a random point in the gas cloud
-        if (i+1) % 100 == 0:
-            print(f"Simulating photon {i+1}/{simulations}")
+        if (i+1) % int(simulations/10) == 0:
+            print(f"\nSimulating photon {i+1}/{simulations}")
         pos = randomGasPoint()
-        phot = photon(sampCell=cell, position=pos)
-        try:
-            result = phot.simulate()
-            # Append result to file
-            fh.WriteDat(filepath = filepath, 
-                        string_to_write = phot.data_to_string()+"\n", 
-                        writemode = "a")
-        except:
-            continue
+        phot = photon(sampCell=cell, position=pos, direction = np.array([0.15,0,1]), id = i+1)
+        #try:
+        result = phot.simulate()
+        # Append result to file
+        fh.WriteDat(filepath = filepath, 
+                    string_to_write = phot.data_to_string()+"\n", 
+                    writemode = "a")
+        #except:
+            #continue
     
 
 

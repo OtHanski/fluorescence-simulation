@@ -20,6 +20,7 @@ for both angles.
 
 import numpy as np
 import math
+np.seterr(all = 'raise')
 
 class SampleCell:
     def __init__(self, 
@@ -104,18 +105,18 @@ class SampleCell:
         pos_path = np.zeros((self.samp,3))
         pos_array = np.tile(position, (self.samp,1))
 
-        if debug:
-            print(f"\nPos array: {pos_array}\n")
-
-        if z_dir:
-            pos_path[z_index+1:] = pos_array[z_index+1:] + transit * (self.z[z_index+1:].reshape(-1,1) - z_start)
-            r_path[z_index:] =  np.sqrt(pos_path[z_index:,0]**2 + pos_path[z_index:,1]**2)
-        else:
-            pos_path[:z_index-1] = pos_array[:z_index-1] - transit * (self.z[:z_index-1].reshape(-1,1) - z_start)
-            r_path[:z_index] =  np.sqrt(pos_path[:z_index,0]**2 + pos_path[:z_index,1]**2)
-            if debug:
-                print(f"\nOriginals: {pos_path[:z_index,0]}\n{pos_path[:z_index,1]}\n")
-                print(pos_path[:z_index,0]**2, pos_path[:z_index,1]**2)
+        try: 
+            if z_dir:
+                pos_path[z_index+1:] = pos_array[z_index+1:] + transit * (self.z[z_index+1:].reshape(-1,1) - z_start)
+                r_path[z_index:] =  np.sqrt(pos_path[z_index:,0]**2 + pos_path[z_index:,1]**2)
+            else:
+                pos_path[:z_index-1] = pos_array[:z_index-1] - transit * (self.z[:z_index-1].reshape(-1,1) - z_start)
+                r_path[:z_index] =  np.sqrt(pos_path[:z_index,0]**2 + pos_path[:z_index,1]**2)
+        except FloatingPointError as er:
+            #print(er)
+            #print(f"transit: {transit}, direction: {direction}")
+            #print(f"Photon at {position} with direction {direction} hit wall at {pos_path[z_index]}")
+            raise er
 
         # Calculate exact location of wall hit via linear interpolation
         # First, locate the index of the wall hit
@@ -124,8 +125,10 @@ class SampleCell:
         # If no wall hit, return the position and direction of the photon plus the exit status (true)
         if len(idhits) == 0:
             if z_dir:
+                if debug: print(f"Exit at {pos_path[-1,0], pos_path[-1,1], self.z[-1]}")
                 return np.array([pos_path[-1,0], pos_path[-1,1], self.z[-1]]), direction, True, "exit"
             else:
+                if debug: print(f"Exit at {pos_path[0,0], pos_path[0,1], self.z[0]}")
                 return np.array([pos_path[0,0], pos_path[0,1], self.z[0]]), direction, True, "exit"
         # idhits returns all "hits", we only want first one.
         idhit = idhits[0][0]
@@ -150,16 +153,26 @@ class SampleCell:
         
         if event == "conversion":
             # Convert wavelength, random direction
-            return poshit, self.random_direction(), False, event
+            if debug: print(f"Photon converted at {poshit}")
+            return poshit, self.randomvec(), False, event
 
         if event == "diffuse":
             # Random direction
-            return poshit, self.random_direction(), False, event
+            return poshit, self.randomvec(), False, event
         
         if event == "specular":
             # Reflect direction specularly
-            surfacenormal = np.array([poshit[0], poshit[1], 0])
-            refdir = direction - 2 * np.dot(direction, surfacenormal) * surfacenormal
+            try:
+                surfacenormal = np.array([poshit[0], poshit[1], 0])
+                refdir = direction - 2 * np.dot(direction, surfacenormal) * surfacenormal
+                for i in refdir:
+                    if abs(i) > 100:
+                        #print(refdir)
+                        raise ValueError("Direction much larger than unity")
+            except Exception as er:
+                #print(er)
+                #print(f"Photon at {position} with direction {direction} hit wall at {poshit} with normal {surfacenormal}")
+                raise er
             return poshit, refdir, False, event
 
     def get_z_index(self, z):
@@ -175,10 +188,18 @@ class SampleCell:
         # Return the angle of the wall at z
         pass
 
-    def random_direction(self):
-        # Return a random direction vector
-        dir = (np.random.rand(3) * 2 - 1)
-        return dir/np.sqrt(dir.dot(dir))
+    def randomvec(self):
+        """Generates a random unit vector in 3D space. Uses spherical 
+                coordinates to generate the vector to ensure uniform distribution.
+        
+        Returns:
+            np.ndarray (x,y,z): Random unit vector"""
+        theta = np.random.rand() * 2 * np.pi
+        phi = np.random.rand() * np.pi
+        z = np.sin(phi)
+        x = np.cos(theta) * np.cos(phi)
+        y = np.sin(theta) * np.cos(phi)
+        return np.array([x,y,z])
 
     def get_absorption_probability(self, wavelength,z):
         # Return the absorption probability for a given wavelength
