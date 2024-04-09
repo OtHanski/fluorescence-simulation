@@ -34,6 +34,7 @@ class photon:
                  id = 0):
         
         self.debug = 0
+        self.logold = 1
 
         # Initialize photon parameters
         self.sampCell = sampCell
@@ -71,11 +72,19 @@ class photon:
         Returns (position, direction, num of wall interactions, wavelength, exit/absorp)."""
         try:
             while True:
+                if self.logold:
+                    self.oldevent = self.event
+                    self.oldpos = self.pos
+                    self.olddirec = self.direc
+
                 hit = self.sampCell.hit_wall(position=self.pos, direction=self.direc, 
                                             wavelength=self.wavelength, debug = self.debug)
                 self.event = hit[3]
                 if hit[3] == "exit":
-                    if self.debug: print(f"Photon exited at {hit[0]} with direction {hit[1]}")
+                    if self.debug: 
+                        print(f"Photon exited at {hit[0]} with direction {hit[1]}, old event {self.oldevent}, old pos {self.oldpos}, old direc {self.olddirec}")
+                    if ((hit[0] == np.array([0,0,0])).all() or (hit[0] == np.array([0,0,10])).all()): 
+                        print(f"Photon exited at {hit[0]} with direction {hit[1]}, \nold event {self.oldevent}, old pos {self.oldpos}, old direc {self.olddirec}")
                     self.pos = hit[0]
                     self.direc = hit[1]
                     return hit[0], hit[1], self.bounces, self.wavelength, hit[3]

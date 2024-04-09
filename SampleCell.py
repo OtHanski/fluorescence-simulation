@@ -126,10 +126,12 @@ class SampleCell:
         if len(idhits) == 0:
             if z_dir:
                 if debug: print(f"Exit at {pos_path[-1,0], pos_path[-1,1], self.z[-1]}")
-                return np.array([pos_path[-1,0], pos_path[-1,1], self.z[-1]]), direction, True, "exit"
+                exitpos = position + transit * (self.z[-1] - z_start)
+                return exitpos, direction, True, "exit"
             else:
                 if debug: print(f"Exit at {pos_path[0,0], pos_path[0,1], self.z[0]}")
-                return np.array([pos_path[0,0], pos_path[0,1], self.z[0]]), direction, True, "exit"
+                exitpos = position + transit * (self.z[0] - z_start)
+                return exitpos, direction, True, "exit"
         # idhits returns all "hits", we only want first one.
         idhit = idhits[0][0]
 
@@ -195,7 +197,7 @@ class SampleCell:
         Returns:
             np.ndarray (x,y,z): Random unit vector"""
         theta = np.random.rand() * 2 * np.pi
-        phi = np.random.rand() * np.pi
+        phi = (np.random.rand()-0.5) * np.pi
         z = np.sin(phi)
         x = np.cos(theta) * np.cos(phi)
         y = np.sin(theta) * np.cos(phi)

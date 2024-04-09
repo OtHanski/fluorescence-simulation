@@ -20,7 +20,7 @@ filename = "simulation.dat"
 # Number of particles to simulate
 simulations = 1000
 # Number of wall sections to divide the cell into (1 to n)
-wall_sections = 150
+wall_sections = 1500
 # Cell parameters:
 shape = "cylinder"
 r_cell = 5E-3 # Radius of the cell [m]
@@ -78,7 +78,7 @@ def main(simulations = simulations, wall_sections = wall_sections, r_cell = r_ce
         if (i+1) % int(simulations/10) == 0:
             print(f"\nSimulating photon {i+1}/{simulations}")
         pos = randomGasPoint()
-        phot = photon(sampCell=cell, position=pos, direction = np.array([0.15,0,1]), id = i+1)
+        phot = photon(sampCell=cell, position=pos, id = i+1)
         #try:
         result = phot.simulate()
         # Append result to file
