@@ -113,9 +113,9 @@ class SampleCell:
                 pos_path[:z_index-1] = pos_array[:z_index-1] - transit * (self.z[:z_index-1].reshape(-1,1) - z_start)
                 r_path[:z_index] =  np.sqrt(pos_path[:z_index,0]**2 + pos_path[:z_index,1]**2)
         except FloatingPointError as er:
-            #print(er)
-            #print(f"transit: {transit}, direction: {direction}")
-            #print(f"Photon at {position} with direction {direction} hit wall at {pos_path[z_index]}")
+            print(er)
+            print(f"transit: {transit}, direction: {direction}")
+            print(f"Photon at {position} with direction {direction} hit wall at {pos_path[z_index]}")
             raise er
 
         # Calculate exact location of wall hit via linear interpolation
@@ -164,7 +164,7 @@ class SampleCell:
             # Reflect direction specularly
             try:
                 surfacenormal = np.array([poshit[0], poshit[1], 0])
-                refdir = direction - 2 * np.dot(direction, surfacenormal) * surfacenormal
+                refdir = direction - 2 * np.dot(direction, surfacenormal) * surfacenormal / np.linalg.norm(surfacenormal)**2
                 for i in refdir:
                     if abs(i) > 100:
                         #print(refdir)
