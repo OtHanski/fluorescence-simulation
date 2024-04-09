@@ -16,15 +16,26 @@ Test the SampleCell class:
 import numpy as np
 import random as rng
 import time
+import matplotlib.pyplot as plt
 
 # Import the classes to be tested
 from SampleCell import SampleCell
-from photon import Photon
+from photon import photon
+import simulation
 
-# settings
-test_cell = 1
+# Test flags
+test_cell = 0
+test_gas = 1
+
+# Sample cell test settings
 timetest = 1
 photontest = 0
+
+# Gas generation test settings
+gas_samples = 10000
+gas_height = 10E-3
+gas_offset = 5E-3
+gas_radius = 1E-3
 
 
 def test_SampleCell():
@@ -60,8 +71,33 @@ def test_SampleCell():
     if photontest:
         # TODO later, when photon class is implemented
         for i in range(100):
-            photon = Photon()
+            testphoton = photon()
+
+def test_Gas_Generation():
+    # Test the randomGasPoint function
+    samples = gas_samples
+    data = np.zeros((samples,3))
+    rdata = np.zeros(samples)
+    for i in range(samples):
+        data[i] = simulation.randomGasPoint(gas_height, gas_offset, gas_radius)
+        rdata[i] = np.sqrt(data[i][0]**2 + data[i][1]**2)
+    
+    # Plot histogram of the generated points as function of r
+    plt.hist(rdata, bins=100)
+    plt.show()
+
+    # Plot the generated points in (x,y) plane with bounding circle
+    fig, ax = plt.subplots()
+    ax.set_aspect('equal')
+    ax.scatter(data[:,0], data[:,1], s = 0.01)
+    circle = plt.Circle((0, 0), gas_radius, fill=False)
+    ax.add_artist(circle)
+    plt.show()
+
+
 
 if __name__ == "__main__":
-    if test_cell == 1:
+    if test_cell:
         test_SampleCell()
+    if test_gas:
+        test_Gas_Generation()

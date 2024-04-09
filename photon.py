@@ -25,33 +25,88 @@ Upon hitting either end of the tube, record exit position and angle.
 from SampleCell import SampleCell
 import numpy as np
 
-class Photon:
+class photon:
     def __init__(self, 
-                 position: np.ndarray = np.array([0,0,1]), 
-                 direction: np.ndarray = np.array([0,0,1]),  
-                 wavelength: float = 121.567E-9,
-                 pabs:float = 0.02, 
-                 pdet:float = 0.5):
+                 sampCell: SampleCell,
+                 position: np.ndarray = np.array([np.nan,np.nan,np.nan]), 
+                 direction: np.ndarray = np.array([0,0,0]), 
+                 wavelength: str = "121.567E-9",
+                 id = 0):
+        
+        self.debug = 0
+
         # Initialize photon parameters
-        self.pos = position
-        self.direction: np.ndarray = direction
+        self.sampCell = sampCell
+        self.id = id
+
+        # If no input position, then initialize at cell center
+        if np.nan in position:
+            self.pos = sampCell.z[int(sampCell.samp/2)] 
+        else:
+            self.pos = position
+
+        self.direc = direction
+        # Unit vector in random direction if no input direction
+        if np.all(self.direc == 0):
+            # Use the sample cell function for proper random gen
+            self.direc = self.sampCell.randomvec()
+        
         self.wavelength = wavelength
-        self.absorption_probability = pabs
-        self.detection_probability = pdet
         self.absorbed = False
         self.detected = False
         self.reflected = False
         self.bounces = 0
+        # self.event should reflect latest event
+        # "exit", "absorption", "specular", "diffuse", "conversion"
+        self.event = None
+
+        if self.debug:
+            print(f"Photon initialized at {self.pos} with direction {self.direc}")
+        
+    def getDir(self):
+        return self.direc
 
     def simulate(self):
-        # Samplecell should be a class with definition of cell geometry and reflectivity values.
-        pass
+        """Simulates photon in sampCell.
+        Returns (position, direction, num of wall interactions, wavelength, exit/absorp)."""
+        try:
+            while True:
+                hit = self.sampCell.hit_wall(position=self.pos, direction=self.direc, 
+                                            wavelength=self.wavelength, debug = self.debug)
+                self.event = hit[3]
+                if hit[3] == "exit":
+                    if self.debug: print(f"Photon exited at {hit[0]} with direction {hit[1]}")
+                    self.pos = hit[0]
+                    self.direc = hit[1]
+                    return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
+                elif hit[3] == "specular":
+                    self.pos = hit[0]
+                    self.direc = hit[1]
+                    self.bounces += 1
+                elif hit[3] == "diffuse":
+                    self.pos = hit[0]
+                    self.direc = hit[1]
+                    self.bounces += 1
+                elif hit[3] == "conversion":
+                    self.pos = hit[0]
+                    self.direc = hit[1]
+                    self.wavelength = "450E-9"
+                    self.bounces += 1
+                elif hit[3] == "absorption":
+                    self.pos = hit[0]
+                    self.direc = hit[1]
+                    return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
+        except Exception as e:
+            print(e)
+            print(self)
+            return None
 
-    def specular_reflection(self):
-        pass
 
-    def diffuse_reflection(self):
-        pass
+    def data_to_string(self):
+        return f"{self.pos}\t{self.direc}\t{self.bounces}\t{self.wavelength}\t{self.event}"
 
-    def absorption(self):
-        pass
+    def __repr__(self):
+        return f"Photon {self.id} at {self.pos} with direction {self.direc} and wavelength {self.wavelength}. Latest event {self.event}."
+    
+    def __str__(self):
+        return self.__repr__()
