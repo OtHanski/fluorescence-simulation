@@ -9,7 +9,7 @@ fileName = "./data/simulation1.dat"
 sampCellRadius = 5E-3
 sampCellZ = 100E-3
 
-top = 0 # Picks photons that exited at sample cell top
+top = 1 # Picks photons that exited at sample cell top
 posDistributionPlot = 0
 angleDistributionPlot = 0
 xyPlanePlot = 0
@@ -18,6 +18,7 @@ wallHeatMapPlot = 1
 numOfWallHitHist = 0
 printInfo = 1
 
+saveFigure = 0
 posDistImName = "data/simDistTop.png"
 angDistImName = "data/simAngTopSampleInTheMiddle.png"
 xyPlaneImName = "data/simXYBotSampleInTheMiddle.png"
@@ -211,6 +212,8 @@ def main():
     wavelenExit = np.array(wavelenExit)
     exitDir = np.array(exitDir)
     exitR = np.array(exitR)
+    absZ = np.array(absZ)
+    wavelenAbs = np.array(wavelenAbs)
 
     # Percentage reached exit
     reachedExit = len(exitPos)
@@ -236,8 +239,6 @@ def main():
     # Angles to plus/minus z
     ang = angleToZ(normDir) * (180/np.pi)
 
-    print(len(x), len(y), len(r), len(ang))
-
     percentAbs = len(absZ)/totalPhotons*100
     info += f"\n{percentAbs:.2f} % of total photons were absorbed"
     absZ = np.array(absZ)
@@ -260,7 +261,8 @@ def main():
             plt.title("Photons exiting sample cell at the bottom")
         #plt.text(0.05, 19.2, f"- {percentage:.1f} % of total photons \n  reached $z$=10\n\n- of which {100*blue/len(exitPos):.1f} % blue")
         plt.tight_layout()
-        plt.savefig(posDistImName)
+        if saveFigure:
+            plt.savefig(posDistImName)
         plt.show()
 
     if angleDistributionPlot:
@@ -273,7 +275,8 @@ def main():
         else:
             plt.title("Angles of photons at sample cell bottom exit")
         plt.tight_layout()
-        plt.savefig(angDistImName)
+        if saveFigure:
+            plt.savefig(angDistImName)
         plt.show()
 
     if xyPlanePlot:
@@ -295,7 +298,8 @@ def main():
         plt.legend()
         #axes.pcolormesh(xmesh, ymesh, (x, y))
         plt.tight_layout()
-        plt.savefig(xyPlaneImName)
+        if saveFigure:
+            plt.savefig(xyPlaneImName)
         plt.show()
 
     if wallHeatMapPlot:
@@ -308,7 +312,8 @@ def main():
         fig4.set_figwidth(2.6)
         #axes.yaxis.set_minor_locator(plt.NullLocator())
         plt.tight_layout()
-        plt.savefig(wallHeatMapImName)
+        if saveFigure:
+            plt.savefig(wallHeatMapImName)
         plt.show()
 
     if printInfo:
