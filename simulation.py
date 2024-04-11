@@ -78,13 +78,13 @@ def main(simulations = simulations, wall_sections = wall_sections, r_cell = r_ce
         f.write("pos(x,y,z),dir(dx,dy,dz),bounces,wavelength,event\n")
     # Simulate the photons
     starttime = time.time()
+    writestr = ""
     for i in range(simulations):
         # Generate a random point in the gas cloud
         if (i+1) % min(int(simulations/10), 25000) == 0:
             print(f"\nSimulating photon {i+1}/{simulations}, time elapsed: {time.time()-starttime:.2f}s\n")
         pos = randomGasPoint()
         phot = photon(sampCell=cell, position=pos, id = i+1)
-        writestr = ""
         try:
             result = phot.simulate()
             writestr += phot.data_to_string()+"\n"
