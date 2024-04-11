@@ -9,10 +9,10 @@ fileName = "./data/simulation20240411_1.dat"
 sampCellRadius = 5E-3
 sampCellZ = 100E-3
 
-top = 1 # Picks photons that exited at sample cell top
+top = 0 # Picks photons that exited at sample cell top
 posDistributionPlot = 0
 angleDistributionPlot = 0
-xyPlanePlot = 0
+xyPlanePlot = 1
 wallHeatMapPlot = 0
 numOfWallHitHist = 0
 printInfo = 1
@@ -224,11 +224,26 @@ def main():
     exitPos = np.array(exitPos)
     exitX = np.take(exitPos, 0, axis=1)
     exitY = np.take(exitPos, 1, axis=1)
+    exitXUV = []
+    exitYUV = []
+    exitXBlue = []
+    exitYBlue = []
+    for i in range(len(wavelenExit)):
+        if wavelenExit[i].strip() == "450E-9":
+            exitXBlue.append(exitX[i])
+            exitYBlue.append(exitY[i])
+        else:
+            exitXUV.append(exitX[i])
+            exitYUV.append(exitY[i])
     wavelenExit = np.array(wavelenExit)
     exitDir = np.array(exitDir)
     exitR = np.array(exitR)
     absZ = np.array(absZ)
     wavelenAbs = np.array(wavelenAbs)
+    exitXBlue = np.array(exitXBlue)
+    exitYBlue = np.array(exitYBlue)
+    exitXUV = np.array(exitXUV)
+    exitYUV = np.array(exitYUV)
 
     # Percentage reached exit
     reachedExit = len(exitPos)
@@ -305,7 +320,8 @@ def main():
         # To be continued
         ymesh, xmesh = np.meshgrid(np.linspace(-1, 1, 100), np.linspace(-1, 1, 100))
         fig3, axes = plt.subplots(num=3)
-        axes.scatter(exitX/sampCellRadius, exitY/sampCellRadius, marker=".", s=4, color="mediumorchid")
+        axes.scatter(exitXBlue/sampCellRadius, exitYBlue/sampCellRadius, marker=".", s=4, color="skyblue")
+        axes.scatter(exitXUV/sampCellRadius, exitYUV/sampCellRadius, marker=".", s=4, color="mediumorchid")
         axes.set_xlabel("$x$ / R")
         axes.set_ylabel("$y$ / R")
         if top:
