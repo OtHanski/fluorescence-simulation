@@ -39,99 +39,6 @@ wallHeatMapImName = "data/wallHeatMapSampleInTheMiddle.png"
 #========================FUNCTIONS======================================================================0===
 
 
-# Old
-def readData(fileName) -> dict:
-    """First row in file should include sample cell specs. 
-    Second row is ignored, and the rest is saved to a list as tuples."""
-    stuff = {"cellSpecs": str, 
-             "pos": np.ndarray, 
-             "dir": np.ndarray, 
-             "wallHits": np.ndarray, 
-             "wavelength": np.ndarray,
-             "event": np.ndarray}
-    with open(fileName) as file:
-        tempdata = []
-        for row in file:
-            rdata = row.strip().split(';')
-            tempdata.append(rdata)
-    tempdata.remove(tempdata[0])
-    positions = []
-    directions = []
-    wallHits = []
-    wavelengths = []
-    events = []
-    # Throw away when debugging done
-    for point in tempdata:
-        try:
-            positions.append(eval(point[0]))
-        except:
-            continue
-        try:
-            directions.append(eval(point[1]))
-        except:
-            positions.remove(positions[-1])
-            continue
-        try:
-            wallHits.append(int(point[2]))
-        except:
-            positions.remove(positions[-1])
-            directions.remove(directions[-1])
-            continue
-        try:
-            wavelengths.append(point[3])
-        except:
-            positions.remove(positions[-1])
-            directions.remove(directions[-1])
-            wallHits.remove(wallHits[-1])
-            continue
-        try:
-            events.append(point[4])
-        except:
-            positions.remove(positions[-1])
-            directions.remove(directions[-1])
-            wallHits.remove(wallHits[-1])
-            wavelengths.remove(wavelengths[-1])
-            continue
-    stuff["pos"] = np.array(positions)
-    stuff["dir"] = np.array(directions)
-    stuff["wallHits"] = np.array(wallHits)
-    stuff["wavelength"] = np.array(wavelengths)
-    stuff["event"] = np.array(events)
-    return stuff
-
-# New
-def readDatData(fileName):
-    stuff = {"cellSpecs": str, 
-             "pos": np.ndarray, 
-             "dir": np.ndarray, 
-             "wallHits": np.ndarray, 
-             "wavelength": np.ndarray,
-             "event": np.ndarray}
-    temp = [row.strip().split('\t') for row in open(fileName).readlines()]
-    temp.remove(temp[0])
-    # Clusterfuck to format data
-    positions = [point[0] for point in temp]
-    for i in range(len(positions)):
-        positions[i] = positions[i].replace("[", "")
-        positions[i] = positions[i].replace("]", "")
-        positions[i] = positions[i].strip().split()
-        positions[i] = [float(positions[i][0]), float(positions[i][1]), float(positions[i][2])]
-    directions = [point[1] for point in temp]
-    for i in range(len(directions)):
-        directions[i] = directions[i].replace("[", "")
-        directions[i] = directions[i].replace("]", "")
-        directions[i] = directions[i].strip().split()
-        directions[i] = [float(directions[i][0]), float(directions[i][1]), float(directions[i][2])]
-    wallHits = [point[2] for point in temp]
-    wavelengths = [point[3] for point in temp]
-    events = [point[4] for point in temp]
-    stuff["pos"] = np.array(positions)
-    stuff["dir"] = np.array(directions)
-    stuff["wallHits"] = np.array(wallHits)
-    stuff["wavelength"] = np.array(wavelengths)
-    stuff["event"] = np.array(events)
-    
-    return stuff
 
 # Read data from JSON
 def readJsonData(fileName):
@@ -162,16 +69,11 @@ def readJsonData(fileName):
 
     return stuff
 
-def angleToZ(data: np.ndarray):
-    if top:
-        zax = np.array([0, 0, 1])
-    else:
-        zax = np.array([0, 0, -1])
-    losAngles = []
-    for a in data:
-        angel = np.arccos((zax[2] * a[2]))
-        losAngles.append(angel)
-    return np.array(losAngles)
+def angleToZ(radangles: np.ndarray):
+    """radangles in radians from positive z-direction, returns angles in degrees"""
+    over_pi2 = radangles[:] > np.pi/2
+    # Black magic to convert 0=>180 to 0 => 90 => 0
+    return radangles[:] * (180/np.pi)*(1-2*over_pi2) + 180*over_pi2
 
 #=======================CALCULATIONS============================================================================
 
@@ -180,7 +82,6 @@ def angleToZ(data: np.ndarray):
 def main():
     
     # HERE IS THE DATA :)
-    #data = readDatData(fileName=fileName) 
     data = readJsonData(fileName=fileName)
     
     # For selecting top or bottom exit
@@ -192,7 +93,7 @@ def main():
     info = "\n"
 
     # Total photons
-    totalPhotons = np.size(data["event"])
+    totalPhotons = len(data["pos"])
 
     # pos and dir xyz
     posxyz = np.empty((totalPhotons, 3))
@@ -264,7 +165,7 @@ def main():
         normDir[i] = [(exitDir[i][0]/length), (exitDir[i][1]/length), (exitDir[i][2]/length)]
 
     # Angles to plus/minus z
-    ang = angleToZ(normDir) * (180/np.pi)
+    ang = angleToZ(normDir)
 
     percentAbs = len(absZ)/totalPhotons*100
     info += f"\n{percentAbs:.2f} % of total photons were absorbed"
