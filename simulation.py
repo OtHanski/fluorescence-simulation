@@ -23,7 +23,7 @@ import FileHandler as fh
 filename = "simulation"
 output = "json" # "dat" or "json"
 # Number of particles to simulate
-simulations = 10
+simulations = 100000
 # Number of wall sections to divide the cell into (1 to n)
 wall_sections = 1500
 # Cell parameters:
@@ -69,7 +69,7 @@ def simulate_dat(sampCell = None, filename = filename, simulations = simulations
         if (i+1) % min(int(simulations/10), 25000) == 0:
             print(f"\nSimulating photon {i+1}/{simulations}, time elapsed: {time.time()-starttime:.2f}s\n")
         pos = randomGasPoint()
-        phot = photon(sampCell=sampCell, position=pos, direction=np.array([0.02,0,1]), id = i+1)
+        phot = photon(sampCell=sampCell, position=pos, id = i+1)
         try:
             result = phot.simulate()
             writestr += phot.data_to_string()+"\n"
@@ -103,7 +103,8 @@ def simulate_json(sampCell = None, filename = filename, simulations = simulation
         if (i+1) % min(int(simulations/10), 25000) == 0:
             print(f"\nSimulating photon {i+1}/{simulations}, time elapsed: {time.time()-starttime:.2f}s\n")
         pos = randomGasPoint()
-        phot = photon(sampCell=sampCell, position=pos, direction=np.array([0.02,0,1]), id = i+1)
+        # , direction=np.array([0.02,0,1])
+        phot = photon(sampCell=sampCell, position=pos, id = i+1)
         try:
             result = phot.simulate()
             data["photons"][i+1] = phot.data_to_dict()

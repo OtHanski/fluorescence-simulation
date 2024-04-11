@@ -38,14 +38,6 @@ wallHeatMapImName = "data/wallHeatMapSampleInTheMiddle.png"
 
 #========================FUNCTIONS======================================================================0===
 
-def saveData(fileName: str, data: list, sampCell: SampleCell = None):
-    """Saves return values of simulate method (photon class) into a csv file with ';' as delimeter."""
-    with open(fileName, "a") as file:
-        if sampCell:
-            pass # Save sample cell specs... to be implemented later
-        file.write("position; direction; number of wall hits; wavelenExitgth; event")
-        for point in data:
-            file.write(f"\n{point[0][0], point[0][1], point[0][2]};{point[1][0], point[1][1], point[1][2]};{point[2]};{point[3]};{point[4]}")
 
 # Old
 def readData(fileName) -> dict:
@@ -141,6 +133,35 @@ def readDatData(fileName):
     
     return stuff
 
+# Read data from JSON
+def readJsonData(fileName):
+    stuff = {"cellSpecs": str, 
+             "pos": np.ndarray, 
+             "dir": np.ndarray, 
+             "wallHits": np.ndarray, 
+             "wavelength": np.ndarray,
+             "event": np.ndarray,
+             "angle": np.ndarray}
+    if not fileName:
+        fileName = fh.ChooseSingleFile(initdir = "./data")
+    readdata = fh.ReadJson(fileName)
+    pos, dir, wallHits, wavelength, event, angle = [], [], [], [], [], []
+    for i in range(1,len(readdata["photons"])+1):
+        pos.append(readdata["photons"][str(i)]["position"])
+        dir.append(readdata["photons"][str(i)]["direction"])
+        wallHits.append(readdata["photons"][str(i)]["bounces"])
+        wavelength.append(readdata["photons"][str(i)]["wavelength"])
+        event.append(readdata["photons"][str(i)]["event"])
+        angle.append(readdata["photons"][str(i)]["angle"])
+    stuff["pos"] = np.array(pos)
+    stuff["dir"] = np.array(dir)
+    stuff["wallHits"] = np.array(wallHits)
+    stuff["wavelength"] = np.array(wavelength)
+    stuff["event"] = np.array(event)
+    stuff["angle"] = np.array(angle)
+
+    return stuff
+
 def angleToZ(data: np.ndarray):
     if top:
         zax = np.array([0, 0, 1])
@@ -159,7 +180,8 @@ def angleToZ(data: np.ndarray):
 def main():
     
     # HERE IS THE DATA :)
-    data = readDatData(fileName=fileName) 
+    #data = readDatData(fileName=fileName) 
+    data = readJsonData(fileName=fileName)
     
     # For selecting top or bottom exit
     botTop = sampCellZ

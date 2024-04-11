@@ -47,7 +47,9 @@ class photon:
         else:
             self.pos = position
 
-        self.direc = direction/np.dot(direction,direction)**0.5
+        self.direc = direction
+        if self.direc.any(): 
+            self.direc = self.direc/np.dot(self.direc,self.direc)**0.5
         # Unit vector in random direction if no input direction
         if np.all(self.direc == 0):
             # Use the sample cell function for proper random gen
