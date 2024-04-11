@@ -5,7 +5,7 @@ from SampleCell import SampleCell
 
 #========================SETUP=======================================================
 
-fileName = "./data/simulation1.dat"
+fileName = "./data/simulation20240411_1.dat"
 sampCellRadius = 5E-3
 sampCellZ = 100E-3
 
@@ -14,15 +14,15 @@ posDistributionPlot = 0
 angleDistributionPlot = 0
 xyPlanePlot = 0
 wallHeatMapPlot = 0
-# To be continued
-numOfWallHitHist = 1
+numOfWallHitHist = 0
 printInfo = 1
 
 saveFigure = 0
-posDistImName = "data/simDistTop.png"
-angDistImName = "data/simAngTopSampleInTheMiddle.png"
-xyPlaneImName = "data/simXYBotSampleInTheMiddle.png"
-wallHeatMapImName = "data/wallHeatMapSampleInTheMiddle.png"
+posDistImName = "data/20240411/simDistTop20240411_1.png"
+angDistImName = "data/20240411/simAngTop20240411_1.png"
+xyPlaneImName = "data/20240411/simXYTop20240411_1.png"
+wallHeatMapImName = "data/20240411/wallHeatMap20240411_1.png"
+numOfWallHitsImName = "data/20240411/wallHitsHist20240411_1.png"
 
 #===========================NOTES==========================================================================
 
@@ -233,7 +233,10 @@ def main():
     # Percentage reached exit
     reachedExit = len(exitPos)
     percentage = 100 * reachedExit / totalPhotons
-    info += f"{percentage:.2f} % reached exit"
+    if top:
+        info += f"{percentage:.2f} % reached top exit\n"
+    else:
+        info += f"{percentage:.2f} % reached top exit\n"
 
     # uv and blue
     uv = []
@@ -243,7 +246,7 @@ def main():
             blue.append(exitR[i])
         else:
             uv.append(exitR[i])
-    info += f"\nUV: {len(uv)}\nBLUE: {len(blue)}\nCONVERTED: {100*len(blue)/len(exitPos):.2f} %"
+    info += f"\nUV: {len(uv)}\nBLUE: {len(blue)}\nCONVERTED: {100*len(blue)/len(exitPos):.2f} %\n"
     uv = np.array(uv)
     blue = np.array(blue)
 
@@ -257,7 +260,7 @@ def main():
     ang = angleToZ(normDir) * (180/np.pi)
 
     percentAbs = len(absZ)/totalPhotons*100
-    info += f"\n{percentAbs:.2f} % of total photons were absorbed"
+    info += f"\n{percentAbs:.2f} % of total photons were absorbed\n"
     absZ = np.array(absZ)
     absZax = np.linspace(0, sampCellZ, 100)
     absZBin = np.digitize(absZ, bins=absZax)
@@ -286,7 +289,7 @@ def main():
 
     if angleDistributionPlot:
         fig2 = plt.figure(2)
-        plt.scatter(exitR/sampCellRadius, ang, s=20, marker='.', c="mediumorchid")
+        plt.scatter(exitR/sampCellRadius, ang, s=4, marker='.', c="mediumorchid")
         plt.xlabel("$r$ / R")
         plt.ylabel("Angle / deg")
         if top:
@@ -302,7 +305,7 @@ def main():
         # To be continued
         ymesh, xmesh = np.meshgrid(np.linspace(-1, 1, 100), np.linspace(-1, 1, 100))
         fig3, axes = plt.subplots(num=3)
-        axes.scatter(exitX/sampCellRadius, exitY/sampCellRadius, marker=".", color="mediumorchid")
+        axes.scatter(exitX/sampCellRadius, exitY/sampCellRadius, marker=".", s=4, color="mediumorchid")
         axes.set_xlabel("$x$ / R")
         axes.set_ylabel("$y$ / R")
         if top:
@@ -337,10 +340,12 @@ def main():
     if numOfWallHitHist:
         # To be continued
         fig5 = plt.figure(5)
-        plt.hist(absHits, bins=85, range=(0, 85), color='cornflowerblue', rwidth=0.75, alpha=0.5, align="mid", label="Absorbed")
-        plt.hist(exitHits, bins=85, range=(0, 85), color='mediumorchid', rwidth=0.75, alpha=0.5, label="Exited")
+        plt.hist(absHits, bins=101, range=(0, 100), color='cornflowerblue', rwidth=0.75, alpha=0.5, align="mid", label="Absorbed")
+        plt.hist(exitHits, bins=101, range=(0, 100), color='mediumorchid', rwidth=0.75, alpha=0.5, label="Exited")
         plt.legend()
         plt.tight_layout()
+        if saveFigure:
+            plt.savefig(numOfWallHitsImName)
         plt.show()
 
     if printInfo:

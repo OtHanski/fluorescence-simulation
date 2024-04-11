@@ -20,11 +20,12 @@ from SampleCell import SampleCell
 import FileHandler as fh
 
 ### Simulation settings ###
-filename = "simulation1.dat"
+filename = "simulation20240411_1"
+output = "dat" # "dat" or "json"
 # Number of particles to simulate
 simulations = 100000
 # Number of wall sections to divide the cell into (1 to n)
-wall_sections = 150
+wall_sections = 1500
 # Cell parameters:
 shape = "cylinder"
 r_cell = 5E-3 # Radius of the cell [m]
@@ -55,6 +56,65 @@ def randomGasPoint(gas_height = gas_height, gas_offset = gas_offset, gas_radius 
 
     return np.array([r*np.cos(theta), r*np.sin(theta), z])
 
+def simulate_dat(sampCell = None, filename = filename, simulations = simulations, 
+                 wall_sections = wall_sections, r_cell = r_cell, l_cell = l_cell):
+    filepath = f"./data/{filename}.dat"
+    with open(filepath, "w") as f:
+        f.write("pos(x,y,z)\tdir(dx,dy,dz)\trad_to_z\tbounces\twavelength\tevent\n")
+    # Simulate the photons
+    starttime = time.time()
+    writestr = ""
+    for i in range(simulations):
+        # Generate a random point in the gas cloud
+        if (i+1) % min(int(simulations/10), 25000) == 0:
+            print(f"\nSimulating photon {i+1}/{simulations}, time elapsed: {time.time()-starttime:.2f}s\n")
+        pos = randomGasPoint()
+        phot = photon(sampCell=sampCell, position=pos, id = i+1)
+        try:
+            result = phot.simulate()
+            writestr += phot.data_to_string()+"\n"
+            # Append results to file every 10 photons (save IO time)
+            if (i+1) % 10 == 0:
+                fh.WriteDat(filepath = filepath, 
+                            string_to_write = writestr, 
+                            writemode = "a")
+                writestr = ""
+        except Exception as e:
+            print(f"Error at photon {i+1}: {e}")
+            print(traceback.format_exc())
+            continue
+    print(f"Simulation of {simulations} photons completed in {time.time()-starttime:.2f}s\n")
+
+def simulate_json(sampCell = None, filename = filename, simulations = simulations, 
+                 wall_sections = wall_sections, r_cell = r_cell, l_cell = l_cell):
+    filepath = f"./data/{filename}.json"
+    
+    # Simulate the photons
+    starttime = time.time()
+    data = {"photons": {},
+            "metadata": {"date": time.strftime("%Y-%m-%d %H:%M:%S"),
+                         "simulations": simulations,
+                         "wall_sections": wall_sections,
+                         "r_cell": r_cell,
+                         "l_cell": l_cell}
+            }
+    for i in range(simulations):
+        # Generate a random point in the gas cloud
+        if (i+1) % min(int(simulations/10), 25000) == 0:
+            print(f"\nSimulating photon {i+1}/{simulations}, time elapsed: {time.time()-starttime:.2f}s\n")
+        pos = randomGasPoint()
+        phot = photon(sampCell=sampCell, position=pos, direction=np.array([0.02,0,1]), id = i+1)
+        try:
+            result = phot.simulate()
+            data["photons"][i+1] = phot.data_to_dict()
+        except Exception as e:
+            print(f"Error at photon {i+1}: {e}")
+            print(traceback.format_exc())
+            continue
+    data["metadata"]["time"] = time.time()-starttime
+    fh.WriteJson(filepath, data)
+    print(f"Simulation of {simulations} photons completed in {time.time()-starttime:.2f}s\n")
+
 
 def main(simulations = simulations, wall_sections = wall_sections, r_cell = r_cell, l_cell = l_cell):
     # Generate a sample cell geometry with straight cylindrical walls
@@ -73,32 +133,10 @@ def main(simulations = simulations, wall_sections = wall_sections, r_cell = r_ce
 
     print(f"Beginning simulation of {simulations} photons")
     
-    filepath = f"./data/{filename}"
-    with open(filepath, "w") as f:
-        f.write("pos(x,y,z),dir(dx,dy,dz),bounces,wavelength,event\n")
-    # Simulate the photons
-    starttime = time.time()
-    for i in range(simulations):
-        # Generate a random point in the gas cloud
-        if (i+1) % min(int(simulations/10), 25000) == 0:
-            print(f"\nSimulating photon {i+1}/{simulations}, time elapsed: {time.time()-starttime:.2f}s\n")
-        pos = randomGasPoint()
-        phot = photon(sampCell=cell, position=pos, id = i+1)
-        writestr = ""
-        try:
-            result = phot.simulate()
-            writestr += phot.data_to_string()+"\n"
-            # Append results to file every 10 photons (save IO time)
-            if (i+1) % 10 == 0:
-                fh.WriteDat(filepath = filepath, 
-                            string_to_write = phot.data_to_string()+"\n", 
-                            writemode = "a")
-                writestr = ""
-        except Exception as e:
-            print(f"Error at photon {i+1}: {e}")
-            print(traceback.format_exc())
-            continue
-    print(f"Simulation of {simulations} photons completed in {time.time()-starttime:.2f}s\n")
+    if output == "dat":
+        simulate_dat(sampCell = cell, simulations = simulations)
+    elif output == "json":
+        simulate_json(sampCell = cell, simulations = simulations)
     
 
 
