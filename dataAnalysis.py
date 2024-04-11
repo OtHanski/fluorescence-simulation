@@ -9,13 +9,13 @@ fileName = "./data/simulation1.dat"
 sampCellRadius = 5E-3
 sampCellZ = 100E-3
 
-top = 0 # Picks photons that exited at sample cell top
-posDistributionPlot = 1
+top = 1 # Picks photons that exited at sample cell top
+posDistributionPlot = 0
 angleDistributionPlot = 0
 xyPlanePlot = 0
 wallHeatMapPlot = 0
 # To be continued
-numOfWallHitHist = 0
+numOfWallHitHist = 1
 printInfo = 1
 
 saveFigure = 0
@@ -167,6 +167,21 @@ def main():
     # Total photons
     totalPhotons = np.size(data["event"])
 
+    # Number of wall hits
+    wallHits = np.empty((totalPhotons))
+    for i in range(totalPhotons):
+        wallHits[i] = int(data["wallHits"][i])
+    absHits = []
+    exitHits = []
+    for i in range(totalPhotons):
+        if data["event"][i].strip() == "absorption":
+            absHits.append(int(data["wallHits"][i]))
+        elif data["event"][i].strip() == "exit":
+            exitHits.append(int(data["wallHits"][i]))
+    absHits = np.array(absHits)
+    exitHits = np.array(exitHits)
+
+
     # pos and dir xyz
     posxyz = np.empty((totalPhotons, 3))
     dirxyz = np.empty((totalPhotons, 3))
@@ -254,8 +269,8 @@ def main():
 
     if posDistributionPlot:
         fig1 = plt.figure(1)
-        plt.hist(blue/sampCellRadius, range=(0, 1), bins=30, color='cornflowerblue', rwidth=0.75, alpha=0.7, label="Blue")
-        plt.hist(uv/sampCellRadius, range=(0, 1), bins=30, color="mediumorchid", rwidth=0.75, alpha=0.6, label="UV")
+        plt.hist(blue/sampCellRadius, range=(0, 1), bins=40, color='cornflowerblue', rwidth=0.75, alpha=0.7, label="Blue")
+        plt.hist(uv/sampCellRadius, range=(0, 1), bins=40, color="mediumorchid", rwidth=0.75, alpha=0.6, label="UV")
         plt.xlabel("$r$ / R")
         plt.ylabel("Number of photons")
         if top:
@@ -314,7 +329,6 @@ def main():
         axes.set_yticks([-0.5, 100.5], ['Bot', 'Top'])
         fig4.suptitle("Photons absorbed")
         fig4.set_figwidth(2.6)
-        #axes.yaxis.set_minor_locator(plt.NullLocator())
         plt.tight_layout()
         if saveFigure:
             plt.savefig(wallHeatMapImName)
@@ -323,7 +337,11 @@ def main():
     if numOfWallHitHist:
         # To be continued
         fig5 = plt.figure(5)
-        plt.hist()
+        plt.hist(absHits, bins=85, range=(0, 85), color='cornflowerblue', rwidth=0.75, alpha=0.5, align="mid", label="Absorbed")
+        plt.hist(exitHits, bins=85, range=(0, 85), color='mediumorchid', rwidth=0.75, alpha=0.5, label="Exited")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
     if printInfo:
         print(info)
