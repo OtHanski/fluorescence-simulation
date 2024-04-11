@@ -9,11 +9,11 @@ fileName = "./data/simulation1.dat"
 sampCellRadius = 5E-3
 sampCellZ = 100E-3
 
-top = 1 # Picks photons that exited at sample cell top
-posDistributionPlot = 0
+top = 0 # Picks photons that exited at sample cell top
+posDistributionPlot = 1
 angleDistributionPlot = 0
 xyPlanePlot = 0
-wallHeatMapPlot = 1
+wallHeatMapPlot = 0
 # To be continued
 numOfWallHitHist = 0
 printInfo = 1
@@ -221,14 +221,16 @@ def main():
     info += f"{percentage:.2f} % reached exit"
 
     # uv and blue
-    uv = 0
-    blue = 0
-    for i in range(len(exitPos)):
+    uv = []
+    blue = []
+    for i in range(len(exitR)):
         if wavelenExit[i].strip() == "450E-9":
-            blue += 1
+            blue.append(exitR[i])
         else:
-            uv += 1
-    info += f"\nUV: {uv}\nBLUE: {blue}\nCONVERTED: {100*blue/len(exitPos):.2f} %"
+            uv.append(exitR[i])
+    info += f"\nUV: {len(uv)}\nBLUE: {len(blue)}\nCONVERTED: {100*len(blue)/len(exitPos):.2f} %"
+    uv = np.array(uv)
+    blue = np.array(blue)
 
     # Normalize direction vectors
     normDir = np.empty((len(exitDir), 3))
@@ -252,13 +254,15 @@ def main():
 
     if posDistributionPlot:
         fig1 = plt.figure(1)
-        plt.hist(exitR/sampCellRadius, range=(0, 1), bins=30, color='dimgrey', rwidth=0.75)
+        plt.hist(blue/sampCellRadius, range=(0, 1), bins=30, color='cornflowerblue', rwidth=0.75, alpha=0.7, label="Blue")
+        plt.hist(uv/sampCellRadius, range=(0, 1), bins=30, color="mediumorchid", rwidth=0.75, alpha=0.6, label="UV")
         plt.xlabel("$r$ / R")
         plt.ylabel("Number of photons")
         if top:
             plt.title("Photons exiting sample cell at the top")
         else:
             plt.title("Photons exiting sample cell at the bottom")
+        plt.legend()
         #plt.text(0.05, 19.2, f"- {percentage:.1f} % of total photons \n  reached $z$=10\n\n- of which {100*blue/len(exitPos):.1f} % blue")
         plt.tight_layout()
         if saveFigure:
@@ -282,7 +286,7 @@ def main():
     if xyPlanePlot:
         # To be continued
         ymesh, xmesh = np.meshgrid(np.linspace(-1, 1, 100), np.linspace(-1, 1, 100))
-        fig3, axes = plt.subplots()
+        fig3, axes = plt.subplots(num=3)
         axes.scatter(exitX/sampCellRadius, exitY/sampCellRadius, marker=".", color="mediumorchid")
         axes.set_xlabel("$x$ / R")
         axes.set_ylabel("$y$ / R")
@@ -303,7 +307,7 @@ def main():
         plt.show()
 
     if wallHeatMapPlot:
-        fig4, axes = plt.subplots()
+        fig4, axes = plt.subplots(num=4)
         hm = axes.imshow(absZperBin[:,np.newaxis], cmap='jet', aspect=0.03, origin='lower')
         fig4.colorbar(hm)
         axes.set_xticks([])
@@ -315,6 +319,11 @@ def main():
         if saveFigure:
             plt.savefig(wallHeatMapImName)
         plt.show()
+
+    if numOfWallHitHist:
+        # To be continued
+        fig5 = plt.figure(5)
+        plt.hist()
 
     if printInfo:
         print(info)
