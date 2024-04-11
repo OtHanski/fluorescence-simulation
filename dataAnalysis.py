@@ -2,10 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from SampleCell import SampleCell
+import FileHandler as fh
 
 #========================SETUP=======================================================
 
 fileName = "./data/simulation20240411_1.dat"
+if not fileName:
+    fileName = fh.ChooseSingleFile(initdir = "./data")
+    print(fileName)
+
 sampCellRadius = 5E-3
 sampCellZ = 100E-3
 
@@ -102,7 +107,6 @@ def readData(fileName) -> dict:
     stuff["event"] = np.array(events)
     return stuff
 
-# New
 def readDatData(fileName):
     stuff = {"cellSpecs": str, 
              "pos": np.ndarray, 
@@ -134,6 +138,35 @@ def readDatData(fileName):
     stuff["wavelength"] = np.array(wavelengths)
     stuff["event"] = np.array(events)
     
+    return stuff
+
+# Read data from JSON
+def readJsonData(fileName):
+    stuff = {"cellSpecs": str, 
+             "pos": np.ndarray, 
+             "dir": np.ndarray, 
+             "wallHits": np.ndarray, 
+             "wavelength": np.ndarray,
+             "event": np.ndarray,
+             "angle": np.ndarray}
+    if not fileName:
+        fileName = fh.ChooseSingleFile(initdir = "./data")
+    readdata = fh.ReadJson(fileName)
+    pos, dir, wallHits, wavelength, event, angle = [], [], [], [], [], []
+    for i in range(1,len(readdata["photons"])+1):
+        pos.append(readdata["photons"][str(i)]["position"])
+        dir.append(readdata["photons"][str(i)]["direction"])
+        wallHits.append(readdata["photons"][str(i)]["bounces"])
+        wavelength.append(readdata["photons"][str(i)]["wavelength"])
+        event.append(readdata["photons"][str(i)]["event"])
+        angle.append(readdata["photons"][str(i)]["angle"])
+    stuff["pos"] = np.array(pos)
+    stuff["dir"] = np.array(dir)
+    stuff["wallHits"] = np.array(wallHits)
+    stuff["wavelength"] = np.array(wavelength)
+    stuff["event"] = np.array(event)
+    stuff["angle"] = np.array(angle)
+
     return stuff
 
 def angleToZ(data: np.ndarray):
