@@ -6,11 +6,7 @@ import FileHandler as fh
 
 #========================SETUP=======================================================
 
-<<<<<<< HEAD
-fileName = "./data/simulation20240411_1.dat"
-=======
 fileName = ""
->>>>>>> main
 if not fileName:
     fileName = fh.ChooseSingleFile(initdir = "./data")
     print(fileName)
@@ -18,36 +14,21 @@ if not fileName:
 sampCellRadius = 5E-3
 sampCellZ = 100E-3
 
-<<<<<<< HEAD
-top = 0 # Picks photons that exited at sample cell top
-posDistributionPlot = 0
-angleDistributionPlot = 0
-xyPlanePlot = 1
-wallHeatMapPlot = 0
-=======
 top = 1 # Picks photons that exited at sample cell top
 posDistributionPlot = 1
 angleDistributionPlot = 1
 xyPlanePlot = 1
 wallHeatMapPlot = 1
 # To be continued
->>>>>>> main
 numOfWallHitHist = 0
 printInfo = 1
 
 saveFigure = 0
-<<<<<<< HEAD
 posDistImName = "data/20240411/simDistTop20240411_1.png"
 angDistImName = "data/20240411/simAngTop20240411_1.png"
 xyPlaneImName = "data/20240411/simXYTop20240411_1.png"
 wallHeatMapImName = "data/20240411/wallHeatMap20240411_1.png"
 numOfWallHitsImName = "data/20240411/wallHitsHist20240411_1.png"
-=======
-posDistImName = "data/simDistTop.png"
-angDistImName = "data/simAngTopSampleInTheMiddle.png"
-xyPlaneImName = "data/simXYBotSampleInTheMiddle.png"
-wallHeatMapImName = "data/wallHeatMapSampleInTheMiddle.png"
->>>>>>> main
 
 #===========================NOTES==========================================================================
 
@@ -127,10 +108,6 @@ def readData(fileName) -> dict:
     stuff["event"] = np.array(events)
     return stuff
 
-<<<<<<< HEAD
-=======
-# New
->>>>>>> main
 def readDatData(fileName):
     stuff = {"cellSpecs": str, 
              "pos": np.ndarray, 
@@ -164,7 +141,6 @@ def readDatData(fileName):
     
     return stuff
 
-<<<<<<< HEAD
 # Read data from JSON
 def readJsonData(fileName):
     stuff = {"cellSpecs": str, 
@@ -194,8 +170,6 @@ def readJsonData(fileName):
 
     return stuff
 
-=======
->>>>>>> main
 def angleToZ(data: np.ndarray):
     if top:
         zax = np.array([0, 0, 1])
@@ -227,7 +201,6 @@ def main():
     # Total photons
     totalPhotons = np.size(data["event"])
 
-<<<<<<< HEAD
     # Number of wall hits
     wallHits = np.empty((totalPhotons))
     for i in range(totalPhotons):
@@ -243,8 +216,6 @@ def main():
     exitHits = np.array(exitHits)
 
 
-=======
->>>>>>> main
     # pos and dir xyz
     posxyz = np.empty((totalPhotons, 3))
     dirxyz = np.empty((totalPhotons, 3))
@@ -287,7 +258,6 @@ def main():
     exitPos = np.array(exitPos)
     exitX = np.take(exitPos, 0, axis=1)
     exitY = np.take(exitPos, 1, axis=1)
-<<<<<<< HEAD
     exitXUV = []
     exitYUV = []
     exitXBlue = []
@@ -299,25 +269,19 @@ def main():
         else:
             exitXUV.append(exitX[i])
             exitYUV.append(exitY[i])
-=======
->>>>>>> main
     wavelenExit = np.array(wavelenExit)
     exitDir = np.array(exitDir)
     exitR = np.array(exitR)
     absZ = np.array(absZ)
     wavelenAbs = np.array(wavelenAbs)
-<<<<<<< HEAD
     exitXBlue = np.array(exitXBlue)
     exitYBlue = np.array(exitYBlue)
     exitXUV = np.array(exitXUV)
     exitYUV = np.array(exitYUV)
-=======
->>>>>>> main
 
     # Percentage reached exit
     reachedExit = len(exitPos)
     percentage = 100 * reachedExit / totalPhotons
-<<<<<<< HEAD
     if top:
         info += f"{percentage:.2f} % reached top exit\n"
     else:
@@ -334,19 +298,6 @@ def main():
     info += f"\nUV: {len(uv)}\nBLUE: {len(blue)}\nCONVERTED: {100*len(blue)/len(exitPos):.2f} %\n"
     uv = np.array(uv)
     blue = np.array(blue)
-=======
-    info += f"{percentage:.2f} % reached exit"
-
-    # uv and blue
-    uv = 0
-    blue = 0
-    for i in range(len(exitPos)):
-        if wavelenExit[i].strip() == "450E-9":
-            blue += 1
-        else:
-            uv += 1
-    info += f"\nUV: {uv}\nBLUE: {blue}\nCONVERTED: {100*blue/len(exitPos):.2f} %"
->>>>>>> main
 
     # Normalize direction vectors
     normDir = np.empty((len(exitDir), 3))
@@ -358,44 +309,27 @@ def main():
     ang = angleToZ(normDir) * (180/np.pi)
 
     percentAbs = len(absZ)/totalPhotons*100
-<<<<<<< HEAD
     info += f"\n{percentAbs:.2f} % of total photons were absorbed\n"
-=======
-    info += f"\n{percentAbs:.2f} % of total photons were absorbed"
->>>>>>> main
     absZ = np.array(absZ)
     absZax = np.linspace(0, sampCellZ, 100)
     absZBin = np.digitize(absZ, bins=absZax)
     absZperBin = np.zeros(len(absZax)+1)
-<<<<<<< HEAD
     for point in np.nditer(absZBin):
         absZperBin[point] += 1
-=======
-    if absZBin.any():
-        for point in np.nditer(absZBin):
-            absZperBin[point] += 1
->>>>>>> main
 
     #=======================PLOTS===================================================================================0
 
     if posDistributionPlot:
         fig1 = plt.figure(1)
-<<<<<<< HEAD
         plt.hist(blue/sampCellRadius, range=(0, 1), bins=40, color='cornflowerblue', rwidth=0.75, alpha=0.7, label="Blue")
         plt.hist(uv/sampCellRadius, range=(0, 1), bins=40, color="mediumorchid", rwidth=0.75, alpha=0.6, label="UV")
-=======
-        plt.hist(exitR/sampCellRadius, range=(0, 1), bins=30, color='dimgrey', rwidth=0.75)
->>>>>>> main
         plt.xlabel("$r$ / R")
         plt.ylabel("Number of photons")
         if top:
             plt.title("Photons exiting sample cell at the top")
         else:
             plt.title("Photons exiting sample cell at the bottom")
-<<<<<<< HEAD
         plt.legend()
-=======
->>>>>>> main
         #plt.text(0.05, 19.2, f"- {percentage:.1f} % of total photons \n  reached $z$=10\n\n- of which {100*blue/len(exitPos):.1f} % blue")
         plt.tight_layout()
         if saveFigure:
@@ -404,11 +338,7 @@ def main():
 
     if angleDistributionPlot:
         fig2 = plt.figure(2)
-<<<<<<< HEAD
         plt.scatter(exitR/sampCellRadius, ang, s=4, marker='.', c="mediumorchid")
-=======
-        plt.scatter(exitR/sampCellRadius, ang, s=20, marker='.', c="mediumorchid")
->>>>>>> main
         plt.xlabel("$r$ / R")
         plt.ylabel("Angle / deg")
         if top:
@@ -423,14 +353,9 @@ def main():
     if xyPlanePlot:
         # To be continued
         ymesh, xmesh = np.meshgrid(np.linspace(-1, 1, 100), np.linspace(-1, 1, 100))
-<<<<<<< HEAD
         fig3, axes = plt.subplots(num=3)
         axes.scatter(exitXBlue/sampCellRadius, exitYBlue/sampCellRadius, marker=".", s=4, color="skyblue")
         axes.scatter(exitXUV/sampCellRadius, exitYUV/sampCellRadius, marker=".", s=4, color="mediumorchid")
-=======
-        fig3, axes = plt.subplots()
-        axes.scatter(exitX/sampCellRadius, exitY/sampCellRadius, marker=".", color="mediumorchid")
->>>>>>> main
         axes.set_xlabel("$x$ / R")
         axes.set_ylabel("$y$ / R")
         if top:
@@ -450,27 +375,18 @@ def main():
         plt.show()
 
     if wallHeatMapPlot:
-<<<<<<< HEAD
         fig4, axes = plt.subplots(num=4)
-=======
-        fig4, axes = plt.subplots()
->>>>>>> main
         hm = axes.imshow(absZperBin[:,np.newaxis], cmap='jet', aspect=0.03, origin='lower')
         fig4.colorbar(hm)
         axes.set_xticks([])
         axes.set_yticks([-0.5, 100.5], ['Bot', 'Top'])
         fig4.suptitle("Photons absorbed")
         fig4.set_figwidth(2.6)
-<<<<<<< HEAD
-=======
-        #axes.yaxis.set_minor_locator(plt.NullLocator())
->>>>>>> main
         plt.tight_layout()
         if saveFigure:
             plt.savefig(wallHeatMapImName)
         plt.show()
 
-<<<<<<< HEAD
     if numOfWallHitHist:
         # To be continued
         fig5 = plt.figure(5)
@@ -482,8 +398,6 @@ def main():
             plt.savefig(numOfWallHitsImName)
         plt.show()
 
-=======
->>>>>>> main
     if printInfo:
         print(info)
 

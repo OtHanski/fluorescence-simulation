@@ -82,7 +82,7 @@ def angleToZ(radangles: np.ndarray):
 def main():
     
     # HERE IS THE DATA :)
-    data = readJsonData(fileName=fileName)
+    data = readDatData(fileName=fileName) 
     
     # For selecting top or bottom exit
     botTop = sampCellZ
@@ -93,7 +93,22 @@ def main():
     info = "\n"
 
     # Total photons
-    totalPhotons = len(data["pos"])
+    totalPhotons = np.size(data["event"])
+
+    # Number of wall hits
+    wallHits = np.empty((totalPhotons))
+    for i in range(totalPhotons):
+        wallHits[i] = int(data["wallHits"][i])
+    absHits = []
+    exitHits = []
+    for i in range(totalPhotons):
+        if data["event"][i].strip() == "absorption":
+            absHits.append(int(data["wallHits"][i]))
+        elif data["event"][i].strip() == "exit":
+            exitHits.append(int(data["wallHits"][i]))
+    absHits = np.array(absHits)
+    exitHits = np.array(exitHits)
+
 
     # pos and dir xyz
     posxyz = np.empty((totalPhotons, 3))
@@ -137,26 +152,46 @@ def main():
     exitPos = np.array(exitPos)
     exitX = np.take(exitPos, 0, axis=1)
     exitY = np.take(exitPos, 1, axis=1)
+    exitXUV = []
+    exitYUV = []
+    exitXBlue = []
+    exitYBlue = []
+    for i in range(len(wavelenExit)):
+        if wavelenExit[i].strip() == "450E-9":
+            exitXBlue.append(exitX[i])
+            exitYBlue.append(exitY[i])
+        else:
+            exitXUV.append(exitX[i])
+            exitYUV.append(exitY[i])
     wavelenExit = np.array(wavelenExit)
     exitDir = np.array(exitDir)
     exitR = np.array(exitR)
     absZ = np.array(absZ)
     wavelenAbs = np.array(wavelenAbs)
+    exitXBlue = np.array(exitXBlue)
+    exitYBlue = np.array(exitYBlue)
+    exitXUV = np.array(exitXUV)
+    exitYUV = np.array(exitYUV)
 
     # Percentage reached exit
     reachedExit = len(exitPos)
     percentage = 100 * reachedExit / totalPhotons
-    info += f"{percentage:.2f} % reached exit"
+    if top:
+        info += f"{percentage:.2f} % reached top exit\n"
+    else:
+        info += f"{percentage:.2f} % reached top exit\n"
 
     # uv and blue
-    uv = 0
-    blue = 0
-    for i in range(len(exitPos)):
+    uv = []
+    blue = []
+    for i in range(len(exitR)):
         if wavelenExit[i].strip() == "450E-9":
-            blue += 1
+            blue.append(exitR[i])
         else:
-            uv += 1
-    info += f"\nUV: {uv}\nBLUE: {blue}\nCONVERTED: {100*blue/len(exitPos):.2f} %"
+            uv.append(exitR[i])
+    info += f"\nUV: {len(uv)}\nBLUE: {len(blue)}\nCONVERTED: {100*len(blue)/len(exitPos):.2f} %\n"
+    uv = np.array(uv)
+    blue = np.array(blue)
 
     # Normalize direction vectors
     normDir = np.empty((len(exitDir), 3))
@@ -165,29 +200,30 @@ def main():
         normDir[i] = [(exitDir[i][0]/length), (exitDir[i][1]/length), (exitDir[i][2]/length)]
 
     # Angles to plus/minus z
-    ang = angleToZ(normDir)
+    ang = angleToZ(normDir) * (180/np.pi)
 
     percentAbs = len(absZ)/totalPhotons*100
-    info += f"\n{percentAbs:.2f} % of total photons were absorbed"
+    info += f"\n{percentAbs:.2f} % of total photons were absorbed\n"
     absZ = np.array(absZ)
     absZax = np.linspace(0, sampCellZ, 100)
     absZBin = np.digitize(absZ, bins=absZax)
     absZperBin = np.zeros(len(absZax)+1)
-    if absZBin.any():
-        for point in np.nditer(absZBin):
-            absZperBin[point] += 1
+    for point in np.nditer(absZBin):
+        absZperBin[point] += 1
 
     #=======================PLOTS===================================================================================0
 
     if posDistributionPlot:
         fig1 = plt.figure(1)
-        plt.hist(exitR/sampCellRadius, range=(0, 1), bins=30, color='dimgrey', rwidth=0.75)
+        plt.hist(blue/sampCellRadius, range=(0, 1), bins=40, color='cornflowerblue', rwidth=0.75, alpha=0.7, label="Blue")
+        plt.hist(uv/sampCellRadius, range=(0, 1), bins=40, color="mediumorchid", rwidth=0.75, alpha=0.6, label="UV")
         plt.xlabel("$r$ / R")
         plt.ylabel("Number of photons")
         if top:
             plt.title("Photons exiting sample cell at the top")
         else:
             plt.title("Photons exiting sample cell at the bottom")
+        plt.legend()
         #plt.text(0.05, 19.2, f"- {percentage:.1f} % of total photons \n  reached $z$=10\n\n- of which {100*blue/len(exitPos):.1f} % blue")
         plt.tight_layout()
         if saveFigure:
@@ -196,7 +232,7 @@ def main():
 
     if angleDistributionPlot:
         fig2 = plt.figure(2)
-        plt.scatter(exitR/sampCellRadius, ang, s=20, marker='.', c="mediumorchid")
+        plt.scatter(exitR/sampCellRadius, ang, s=4, marker='.', c="mediumorchid")
         plt.xlabel("$r$ / R")
         plt.ylabel("Angle / deg")
         if top:
@@ -211,8 +247,9 @@ def main():
     if xyPlanePlot:
         # To be continued
         ymesh, xmesh = np.meshgrid(np.linspace(-1, 1, 100), np.linspace(-1, 1, 100))
-        fig3, axes = plt.subplots()
-        axes.scatter(exitX/sampCellRadius, exitY/sampCellRadius, marker=".", color="mediumorchid")
+        fig3, axes = plt.subplots(num=3)
+        axes.scatter(exitXBlue/sampCellRadius, exitYBlue/sampCellRadius, marker=".", s=4, color="skyblue")
+        axes.scatter(exitXUV/sampCellRadius, exitYUV/sampCellRadius, marker=".", s=4, color="mediumorchid")
         axes.set_xlabel("$x$ / R")
         axes.set_ylabel("$y$ / R")
         if top:
@@ -232,17 +269,27 @@ def main():
         plt.show()
 
     if wallHeatMapPlot:
-        fig4, axes = plt.subplots()
+        fig4, axes = plt.subplots(num=4)
         hm = axes.imshow(absZperBin[:,np.newaxis], cmap='jet', aspect=0.03, origin='lower')
         fig4.colorbar(hm)
         axes.set_xticks([])
         axes.set_yticks([-0.5, 100.5], ['Bot', 'Top'])
         fig4.suptitle("Photons absorbed")
         fig4.set_figwidth(2.6)
-        #axes.yaxis.set_minor_locator(plt.NullLocator())
         plt.tight_layout()
         if saveFigure:
             plt.savefig(wallHeatMapImName)
+        plt.show()
+
+    if numOfWallHitHist:
+        # To be continued
+        fig5 = plt.figure(5)
+        plt.hist(absHits, bins=101, range=(0, 100), color='cornflowerblue', rwidth=0.75, alpha=0.5, align="mid", label="Absorbed")
+        plt.hist(exitHits, bins=101, range=(0, 100), color='mediumorchid', rwidth=0.75, alpha=0.5, label="Exited")
+        plt.legend()
+        plt.tight_layout()
+        if saveFigure:
+            plt.savefig(numOfWallHitsImName)
         plt.show()
 
     if printInfo:
