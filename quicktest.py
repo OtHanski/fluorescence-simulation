@@ -3,12 +3,13 @@ from photon import photon
 from dataAnalysis import saveData
 import numpy as np
 
-specrefl = {"121.567E-9": np.zeros(1000-1)+1, "450E-9": np.zeros(1000-1)+0.98}
-diffrefl = {"121.567E-9": np.zeros(1000-1), "450E-9": np.zeros(1000-1)}
-absprob = {"121.567E-9": np.zeros(1000-1), "450E-9": np.zeros(1000-1)+0.02}
-WLconversion = {"121.567E-9": np.zeros(1000-1), "450E-9": np.zeros(1000-1)}
+samples = 100
+specrefl = {"121.567E-9": np.zeros(samples-1)+1, "450E-9": np.zeros(samples-1)+0.98}
+diffrefl = {"121.567E-9": np.zeros(samples-1), "450E-9": np.zeros(samples-1)}
+absprob = {"121.567E-9": np.zeros(samples-1), "450E-9": np.zeros(samples-1)+0.02}
+WLconversion = {"121.567E-9": np.zeros(samples-1), "450E-9": np.zeros(samples-1)}
 
-samp = SampleCell(np.linspace(0, 10, 1000), np.ones(1000), samples=1000)
+samp = SampleCell(np.linspace(0, 10, samples), np.ones(samples), samples=samples, specrefl=specrefl, diffrefl=diffrefl, absprob=absprob, WLconversion=WLconversion)
 
 pos = np.array([0, 0, 5])
 
@@ -20,7 +21,7 @@ totalPhot2 = 0
 dirrrr: np.ndarray = np.array([0.30960542, -0.09976733, -0.94561671])
 negdirs1 = []
 negdirs2 = []
-for i in range(100):
+for i in range(10):
     phot = photon(sampCell=samp, position=pos)
     negdirs1.append(phot.getDir())
     try:

@@ -48,6 +48,8 @@ class photon:
             self.pos = position
 
         self.direc = direction
+        if self.direc.any(): 
+            self.direc = self.direc/np.dot(self.direc,self.direc)**0.5
         # Unit vector in random direction if no input direction
         if np.all(self.direc == 0):
             # Use the sample cell function for proper random gen
@@ -107,9 +109,22 @@ class photon:
             print(self)
             return None
 
+    def angle_to_z(self):
+        return np.arccos(self.direc[2])
+
+    def array_to_string(self, array):
+        return f"np.array([{array[0]},{array[1]},{array[2]}])"
 
     def data_to_string(self):
-        return f"{self.pos}\t{self.direc}\t{self.bounces}\t{self.wavelength}\t{self.event}"
+        return f"{self.array_to_string(self.pos)}\t{self.array_to_string(self.direc)}\t{self.angle_to_z()}\t{self.bounces}\t{self.wavelength}\t{self.event}"
+    
+    def data_to_dict(self):
+        return {"position": self.pos.tolist(), 
+                "direction": self.direc.tolist(), 
+                "angle": self.angle_to_z(), 
+                "bounces": self.bounces, 
+                "wavelength": self.wavelength, 
+                "event": self.event}
 
     def __repr__(self):
         return f"Photon {self.id} at {self.pos} with direction {self.direc} and wavelength {self.wavelength}. Latest event {self.event}."

@@ -2,6 +2,7 @@ import os
 import json
 import tkinter as tk
 from tkinter import filedialog
+import numpy as np
 
 def ChooseFolder(initdir = ".."):
     # Initialise tkinter window
@@ -127,3 +128,33 @@ def WriteDat(filepath = None, string_to_write = "", writemode = "w"):
         dat_file.write(string_to_write)
     
     return filepath
+
+def ReadDat_dict(filepath = None):
+    # Reads a dat file into a dictionary
+    if filepath == None:
+        filepath = filedialog.askopenfilename()
+    with open(filepath, "r") as dat_file:
+        lines = dat_file.readlines()
+    # Remove header
+    header = lines.pop(0)
+    keys = header.split("\t")
+    data = {}
+    # Create empty lists for each key, strip whitespace
+    for i in range(len(keys)):
+        keys[i] = keys[i].strip()
+        data[keys[i]] = []
+    for line in lines:
+        if line[0] == "#":
+            continue
+        else:
+            print("Line: "+line)
+            line = line.split("\t")
+            for i in range(len(line)):
+                try:
+                    data[keys[i]].append(float(line[i]))
+                except KeyError:
+                    print("Key fucked")
+                except ValueError:
+                    data[keys[i]].append(eval(line[i]))
+    
+    return data

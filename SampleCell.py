@@ -127,9 +127,11 @@ class SampleCell:
             else:
                 exitpos = position + transit * (self.z[0] - z_start)
                 return exitpos, direction, True, "exit"
+            
         # idhits returns all "hits", we only want first one.
         idhit = idhits[0][0]
 
+        # Linear interpolation to find exact hit location
         r1, r2 = r_path[idhit], r_path[idhit+1]
         w1, w2 = self.r[idhit], self.r[idhit+1]
         z1, z2 = self.z[idhit], self.z[idhit+1]
