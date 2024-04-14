@@ -15,8 +15,11 @@ sampCellRadius = 5E-3
 sampCellZ = 100E-3
 
 top = 1 # Picks photons that exited at sample cell top
+plot_exitHistogram = 0
+plot_angleDistribution = 1
+
 posDistributionPlot = 1
-angleDistributionPlot = 1
+angleDistributionPlot = 0
 xyPlanePlot = 1
 wallHeatMapPlot = 1
 # To be continued
@@ -28,6 +31,7 @@ posDistImName = "data/simDistTop.png"
 angDistImName = "data/simAngTopSampleInTheMiddle.png"
 xyPlaneImName = "data/simXYBotSampleInTheMiddle.png"
 wallHeatMapImName = "data/wallHeatMapSampleInTheMiddle.png"
+numOfWallHitsImName = "data/20240411/wallHitsHist20240411_1.png"
 
 #===========================NOTES==========================================================================
 
@@ -41,14 +45,26 @@ wallHeatMapImName = "data/wallHeatMapSampleInTheMiddle.png"
 
 
 # Read data from JSON
-def readJsonData(fileName):
+def readJSONData(fileName):
+    """
+    Reads data from JSON file and returns a dictionary with the following keys
+    "cellSpecs": str,
+    "pos": np.ndarray,
+    "dir": np.ndarray,
+    "wallHits": np.ndarray,
+    "wavelength": np.ndarray,
+    "event": np.ndarray,
+    "angle": np.ndarray,
+    "metadata": dict
+    """
     stuff = {"cellSpecs": str, 
              "pos": np.ndarray, 
              "dir": np.ndarray, 
              "wallHits": np.ndarray, 
              "wavelength": np.ndarray,
              "event": np.ndarray,
-             "angle": np.ndarray}
+             "angle": np.ndarray,
+             "metadata": dict}
     if not fileName:
         fileName = fh.ChooseSingleFile(initdir = "./data")
     readdata = fh.ReadJson(fileName)
@@ -66,8 +82,16 @@ def readJsonData(fileName):
     stuff["wavelength"] = np.array(wavelength)
     stuff["event"] = np.array(event)
     stuff["angle"] = np.array(angle)
+    stuff["metadata"] = readdata["metadata"]
 
     return stuff
+
+def rawJSONData(fileName):
+    if not fileName:
+        fileName = fh.ChooseSingleFile(initdir = "./data")
+    readdata = fh.ReadJson(fileName)
+    return readdata
+
 
 def angleToZ(radangles: np.ndarray):
     """radangles in radians from positive z-direction, returns angles in degrees"""
@@ -75,25 +99,151 @@ def angleToZ(radangles: np.ndarray):
     # Black magic to convert 0=>180 to 0 => 90 => 0
     return radangles[:] * (180/np.pi)*(1-2*over_pi2) + 180*over_pi2
 
+def getExitRadius(data, exit = "top", wavelengths = ["450E-9", "121.567E-9"]):
+    # Get photons that exited at the top, separated by wavelength
+    Exits = {}
+    # Set exit position
+    exitZ = (exit=="top") * data["metadata"]["l_cell"]
+
+    # If all wavelengths are wanted, return all exit radii in single array
+    if wavelengths == "all":
+        Exits["all"] = {}
+        for key in data["photons"]:
+            if data["photons"][key]["event"] == "exit" and data["photons"][key]["position"][2] == exitZ:
+                Exits["all"][key] = data["photons"][key]
+        Exits["all"] = np.array([Exits["all"][key]["position"][0]**2 + Exits["all"][key]["position"][1]**2 for key in Exits["all"]])
+        Exits["all"] = np.sqrt(Exits["all"])
+        return Exits
+
+    for key in wavelengths:
+        Exits[key] = {}
+    
+    for key in data["photons"]:
+        if data["photons"][key]["event"] == "exit" and data["photons"][key]["position"][2] == exitZ:
+            if data["photons"][key]["wavelength"] in wavelengths:
+                Exits[data["photons"][key]["wavelength"]][key] = data["photons"][key]
+
+    # Calculate the radii of the exit positions
+    for wavelength in Exits:
+        Exits[wavelength] = np.array([Exits[wavelength][key]["position"][0]**2 + Exits[wavelength][key]["position"][1]**2 for key in Exits[wavelength]])
+        Exits[wavelength] = np.sqrt(Exits[wavelength])
+    
+    return Exits
+
+def getAngles(data, exit = "top", wavelengths = "all"):
+    """Returns the angles of the photons that exited the sample cell at the top or bottom, separated by wavelength
+    {wavelength: [radius, angle]} or {all: [radius, angle]} if all wavelengths are wanted ("all" not finished)"""
+    # Get photons that exited at the top, separated by wavelength
+    Exits = {}
+    # Set exit position
+    exitZ = (exit=="top") * data["metadata"]["l_cell"]
+
+    # If all wavelengths are wanted, return all exit radii in single array
+    if wavelengths == "all":
+        Exits["all"] = {}
+        for key in data["photons"]:
+            if data["photons"][key]["event"] == "exit" and data["photons"][key]["position"][2] == exitZ:
+                Exits["all"][key] = data["photons"][key]
+        Exits["all"] = np.array([Exits["all"][key]["position"][0]**2 + Exits["all"][key]["position"][1]**2 for key in Exits["all"]])
+        Exits["all"] = np.sqrt(Exits["all"])
+        return Exits
+
+    for key in wavelengths:
+        Exits[key] = {}
+    
+    for key in data["photons"]:
+        if data["photons"][key]["event"] == "exit" and data["photons"][key]["position"][2] == exitZ:
+            if data["photons"][key]["wavelength"] in wavelengths:
+                Exits[data["photons"][key]["wavelength"]][key] = data["photons"][key]
+
+    # Calculate the radii of the exit positions
+    for wavelength in Exits:
+        Exits[wavelength] = np.array([[Exits[wavelength][key]["position"][0]**2 + Exits[wavelength][key]["position"][1]**2, Exits[wavelength][key]["angle"]] for key in Exits[wavelength]])
+        Exits[wavelength][0] = np.sqrt(Exits[wavelength][0])
+        Exits[wavelength][1] = angleToZ(Exits[wavelength][1])
+    
+    return Exits
+    
+#========================PLOT FUNCTIONS=========================================================================
+
+def posDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure = 0, logscale = False, filename = "./data/DistrHistogram.png"):
+    """Plots the distribution of photons that exited the sample cell at the top or bottom as a histogram of their exit radii"""
+    # Init plot
+    fig = plt.figure(1)
+    # Set exit position
+    CellR = data["metadata"]["r_cell"]
+
+    ExitR = getExitRadius(data, exit = exit, wavelengths = [blue, uv])
+    bluer = ExitR[blue]
+    uvr = ExitR[uv]
+
+    plt.hist(bluer/CellR, range=(0, 1), bins=40, color='cornflowerblue', rwidth=0.75, alpha=0.7, label="Blue")
+    plt.hist(uvr/CellR, range=(0, 1), bins=40, color="mediumorchid", rwidth=0.75, alpha=0.6, label="UV")
+    plt.xlabel("$r$ / R")
+    plt.ylabel("Number of photons")
+    if exit == "top":
+        plt.title("Photons exiting sample cell at the top")
+    else:
+        plt.title("Photons exiting sample cell at the bottom")
+    plt.legend()
+    #plt.text(0.05, 19.2, f"- {percentage:.1f} % of total photons \n  reached $z$=10\n\n- of which {100*blue/len(exitPos):.1f} % blue")
+    plt.tight_layout()
+    if logscale:
+        plt.yscale("log")
+    if savefigure:
+        plt.savefig(filename)
+    plt.show()
+
+
+def angleDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure = 0, logscale = False, filename = "./data/DistrHistogram.png", xlim = 1):
+    fig2 = plt.figure(2)
+    # Set exit position
+    CellR = data["metadata"]["r_cell"]
+    angdata = getAngles(data, exit = exit, wavelengths = [blue, uv])
+
+    for key in angdata:
+        if key == blue:
+            plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', c="cornflowerblue", label = "Blue")
+        elif key == uv:
+            plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', c="mediumorchid", label = "UV")
+        else:
+            plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', label = f"{key}")
+    
+    plt.xlabel("$r$ / R")
+    plt.ylabel("Angle / deg")
+    plt.xlim(0,xlim)
+    if exit == "top":
+        plt.title("Angles of photons at sample cell top exit")
+    else:
+        plt.title("Angles of photons at sample cell bottom exit")
+    plt.tight_layout()
+    if saveFigure:
+        plt.savefig(angDistImName)
+    plt.show()
+
 #=======================CALCULATIONS============================================================================
 
 # Bottom of sample cell is assumed to be at z=0
 
 def main():
     
-    # HERE IS THE DATA :)
-    data = readDatData(fileName=fileName) 
+    # Read data from file
+    data = rawJSONData(fileName=fileName) 
     
+    # Check the metadata of the simulation
+    cellexit = {"bot": 0, "top": data["metadata"]["l_cell"]}
+    totalPhotons = data["metadata"]["simulations"]
+
+    # For printing stuff
+    info = "\n"
+
+    """
     # For selecting top or bottom exit
     botTop = sampCellZ
     if top:
         botTop = 0.
 
-    # For printing stuff
-    info = "\n"
-
-    # Total photons
-    totalPhotons = np.size(data["event"])
+    
 
     # Number of wall hits
     wallHits = np.empty((totalPhotons))
@@ -210,40 +360,17 @@ def main():
     absZperBin = np.zeros(len(absZax)+1)
     for point in np.nditer(absZBin):
         absZperBin[point] += 1
-
+    """
     #=======================PLOTS===================================================================================0
+    if plot_exitHistogram:
+        posDistributionPlot(data, exit = "top")
+        posDistributionPlot(data, exit = "bot")
+    
+    if plot_angleDistribution:
+        angleDistributionPlot(data, exit = "top")
+        angleDistributionPlot(data, exit = "bot")
 
-    if posDistributionPlot:
-        fig1 = plt.figure(1)
-        plt.hist(blue/sampCellRadius, range=(0, 1), bins=40, color='cornflowerblue', rwidth=0.75, alpha=0.7, label="Blue")
-        plt.hist(uv/sampCellRadius, range=(0, 1), bins=40, color="mediumorchid", rwidth=0.75, alpha=0.6, label="UV")
-        plt.xlabel("$r$ / R")
-        plt.ylabel("Number of photons")
-        if top:
-            plt.title("Photons exiting sample cell at the top")
-        else:
-            plt.title("Photons exiting sample cell at the bottom")
-        plt.legend()
-        #plt.text(0.05, 19.2, f"- {percentage:.1f} % of total photons \n  reached $z$=10\n\n- of which {100*blue/len(exitPos):.1f} % blue")
-        plt.tight_layout()
-        if saveFigure:
-            plt.savefig(posDistImName)
-        plt.show()
-
-    if angleDistributionPlot:
-        fig2 = plt.figure(2)
-        plt.scatter(exitR/sampCellRadius, ang, s=4, marker='.', c="mediumorchid")
-        plt.xlabel("$r$ / R")
-        plt.ylabel("Angle / deg")
-        if top:
-            plt.title("Angles of photons at sample cell top exit")
-        else:
-            plt.title("Angles of photons at sample cell bottom exit")
-        plt.tight_layout()
-        if saveFigure:
-            plt.savefig(angDistImName)
-        plt.show()
-
+    """
     if xyPlanePlot:
         # To be continued
         ymesh, xmesh = np.meshgrid(np.linspace(-1, 1, 100), np.linspace(-1, 1, 100))
@@ -291,6 +418,7 @@ def main():
         if saveFigure:
             plt.savefig(numOfWallHitsImName)
         plt.show()
+    """
 
     if printInfo:
         print(info)
