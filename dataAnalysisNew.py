@@ -269,9 +269,9 @@ def xyPlanePlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure 
     axes.scatter(exitPos[uv][:,0]/CellR, exitPos[uv][:,1]/CellR, marker=".", s=4, color="mediumorchid", label = "UV")
     axes.set_xlabel("$x$ / R")
     axes.set_ylabel("$y$ / R")
-    if top:
+    if exit == "top":
         plt.title("Top")
-    else:
+    elif exit == "bot":
         plt.title("Bottom")
     circle = Circle(xy=(0, 0), radius=1, ec="black", figure=fig3, fill=False, ls="-", visible=True, lw=2, label="$r$=R")
     axes.set_aspect(1)
