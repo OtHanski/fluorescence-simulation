@@ -60,7 +60,7 @@ class SampleCell:
         self.samp = samples
         self.wavelengths = wavelengths
 
-        # Calculate the angle of the wall against the z-axis
+        # Calculate the slope of the wall against z-axis, positive for increasing r
         self.wall = np.zeros(self.samp-1)
 
         # Define the probabilities of reflection and absorption
@@ -70,7 +70,7 @@ class SampleCell:
         self.WLconversion = WLconversion
 
         for i in range(self.samp-1):
-            self.wall[i] = np.arctan((r[i+1]-r[i])/(z[i+1]-z[i]))
+            self.wall[i] = (r[i+1]-r[i])/(z[i+1]-z[i])
     
     def hit_wall(self, position = [0,0,0], direction = [1,1,1], wavelength:str = "450E-9", debug = 0):
         """
@@ -138,7 +138,7 @@ class SampleCell:
         zhit = z1 + ((w1 - r1) * (z2 - z1)) / (r2 - r1 - w2 + w1)
 
         poshit = position + transit * (zhit - z_start)
-        surfacenormal = np.array([poshit[0], poshit[1], 0])
+        surfacenormal = self.get_surfacenormal(poshit)
 
         # Resolve whether the photon reflects, absorbs or converts
         event = np.random.choice(["specular", "diffuse", "absorption", "conversion"],
@@ -153,11 +153,11 @@ class SampleCell:
         
         if event == "conversion":
             # Convert wavelength, random direction
-            return poshit, self.randomvec(), False, event
+            return poshit, self.randomreflection(surfacenormal), False, event
 
         if event == "diffuse":
             # Random direction
-            return poshit, self.randomvec(), False, event
+            return poshit,  self.randomreflection(surfacenormal), False, event
         
         if event == "specular":
             # Reflect direction specularly
@@ -168,17 +168,16 @@ class SampleCell:
             return poshit, refdir, False, event
 
     def get_z_index(self, z):
-        # Return the index of z in the z array
+        # Return the index of first element before z in the z array
         
         idx = np.searchsorted(self.z, z, side="left")
-        if idx > 0 and (idx == len(self.z) or math.fabs(z - self.z[idx-1]) < math.fabs(z - self.z[idx])):
-            return idx-1
-        else:
-            return idx
+        return idx-1
 
-    def get_wall_angle(self, z):
-        # Return the angle of the wall at z
-        pass
+    def get_surfacenormal(self, pos):
+        # Return the normal vector of a wall at a given position.
+        x, y, z = pos
+        wallslope = self.wall[self.get_z_index(z)]
+        return np.array([-x, -y, -wallslope])
 
     def randomvec(self):
         """Generates a random unit vector in 3D space. Uses spherical 
@@ -192,6 +191,39 @@ class SampleCell:
         x = np.cos(theta) * np.cos(phi)
         y = np.sin(theta) * np.cos(phi)
         return np.array([x,y,z])
+
+    def randomreflection2(self, surfacenormal):
+        """Return a random reflection out of a surface direction given a normal vector of said surface
+        
+        Returns:
+            np.ndarray (x,y,z): Random reflection direction"""
+        # theta is the angle in the plane of the reflection surface,
+        # phi is the angle compared to normal vector (radial)
+        theta = np.random.rand() * 2 * np.pi
+        phi = np.random.rand() * np.pi/2
+
+        phi2 = np.arccos(np.dot(surfacenormal, np.array([0,0,1])))
+
+        # Calculate the new direction
+        reflectionvector = np.array([np.cos(theta) * np.cos(phi) * np.sin(phi2), 
+                                     np.sin(theta) * np.sin(phi) * np.cos(phi2), 
+                                     np.cos(phi) * np.sin(phi2)])
+
+        return reflectionvector
+    
+    def randomreflection(self, surfacenormal):
+        """Return a random reflection out of a surface direction given a normal vector of said surface
+        
+        Returns:
+            np.ndarray (x,y,z): Random reflection direction"""
+        # theta is the angle in the plane of the reflection surface,
+        # phi is the angle compared to normal vector (radial)
+        reflectionvector = np.zeros(3)
+        while not np.dot(surfacenormal, reflectionvector) > 0:
+            reflectionvector = self.randomvec()
+
+        return reflectionvector
+        
 
     def get_absorption_probability(self, wavelength,z):
         # Return the absorption probability for a given wavelength
