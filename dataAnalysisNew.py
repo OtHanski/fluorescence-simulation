@@ -11,9 +11,9 @@ if not fileName:
     print(fileName)
 
 plot_exitHistogram = 0
-plot_angleDistribution = 0
+plot_angleDistribution = 1
 plot_xyPlanePlot = 1
-plot_WallHeatMap = 0
+plot_WallHeatMap = 1
 
 posDistImName = "data/simDistTop.png"
 angDistImName = "data/simAngTopSampleInTheMiddle.png"
@@ -119,7 +119,7 @@ def getExitRadius(data, exit = "top", wavelengths = ["450E-9", "121.567E-9"]):
     # Get photons that exited at the top, separated by wavelength
     Exits = {}
     # Set exit position
-    exitZ = (exit=="top") * data["metadata"]["l_cell"]
+    exitZ = (exit == "top") * data["metadata"]["l_cell"]
 
     # If all wavelengths are wanted, return all exit radii in single array
     if wavelengths == "all":
@@ -174,9 +174,12 @@ def getAngles(data, exit = "top", wavelengths = "all"):
 
     # Calculate the radii of the exit positions
     for wavelength in Exits:
+        print("WL: ", wavelength)
         Exits[wavelength] = np.array([[Exits[wavelength][key]["position"][0]**2 + Exits[wavelength][key]["position"][1]**2, Exits[wavelength][key]["angle"]] for key in Exits[wavelength]])
-        Exits[wavelength][0] = np.sqrt(Exits[wavelength][0])
-        Exits[wavelength][1] = angleToZ(Exits[wavelength][1])
+        print(Exits[wavelength])
+        if Exits[wavelength].size > 0:
+            Exits[wavelength][0] = np.sqrt(Exits[wavelength][0])
+            Exits[wavelength][1] = angleToZ(Exits[wavelength][1])
     
     return Exits
 
@@ -237,13 +240,14 @@ def angleDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", s
     angdata = getAngles(data, exit = exit, wavelengths = [blue, uv])
 
     for key in angdata:
-        if key == blue:
-            plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', c="cornflowerblue", label = "Blue")
-        elif key == uv:
-            plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', c="mediumorchid", label = "UV")
-        else:
-            plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', label = f"{key}")
-    
+        if angdata[key].size > 0:
+            if key == blue:
+                plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', c="cornflowerblue", label = "Blue")
+            elif key == uv:
+                plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', c="mediumorchid", label = "UV")
+            else:
+                plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', label = f"{key}")
+        
     plt.xlabel("$r$ / R")
     plt.ylabel("Angle / deg")
     plt.xlim(0,xlim)
@@ -263,8 +267,10 @@ def xyPlanePlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure 
     CellR = data["metadata"]["r_cell"]
     exitPos = getExitPosition(data, exit = exit, wavelengths = [blue, uv])
 
-    axes.scatter(exitPos[blue][:,0]/CellR, exitPos[blue][:,1]/CellR, marker=".", s=4, color="skyblue", label = "Blue")
-    axes.scatter(exitPos[uv][:,0]/CellR, exitPos[uv][:,1]/CellR, marker=".", s=4, color="mediumorchid", label = "UV")
+    if exitPos[blue].size > 0:
+        axes.scatter(exitPos[blue][:,0]/CellR, exitPos[blue][:,1]/CellR, marker=".", s=4, color="skyblue", label = "Blue")
+    if exitPos[uv].size > 0:
+        axes.scatter(exitPos[uv][:,0]/CellR, exitPos[uv][:,1]/CellR, marker=".", s=4, color="mediumorchid", label = "UV")
     axes.set_xlabel("$x$ / R")
     axes.set_ylabel("$y$ / R")
     if exit == "top":
