@@ -12,8 +12,8 @@ if not fileName:
 
 plot_exitHistogram = 0
 plot_angleDistribution = 0
-plot_xyPlanePlot = 0
-plot_WallHeatMap = 1
+plot_xyPlanePlot = 1
+plot_WallHeatMap = 0
 
 posDistImName = "data/simDistTop.png"
 angDistImName = "data/simAngTopSampleInTheMiddle.png"
@@ -198,7 +198,6 @@ def getAbsorbZ(data, wavelengths = "all"):
                 Absorbed[data["photons"][key]["wavelength"]][key] = data["photons"][key]
         for wavelength in Absorbed:
             Absorbed[wavelength] = np.array([Absorbed[wavelength][key]["position"][2] for key in Absorbed[wavelength]])
-        print(Absorbed)
         return Absorbed
 
 #========================PLOT FUNCTIONS=========================================================================
@@ -263,7 +262,6 @@ def xyPlanePlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure 
     # Set exit position
     CellR = data["metadata"]["r_cell"]
     exitPos = getExitPosition(data, exit = exit, wavelengths = [blue, uv])
-    print(exitPos)
 
     axes.scatter(exitPos[blue][:,0]/CellR, exitPos[blue][:,1]/CellR, marker=".", s=4, color="skyblue", label = "Blue")
     axes.scatter(exitPos[uv][:,0]/CellR, exitPos[uv][:,1]/CellR, marker=".", s=4, color="mediumorchid", label = "UV")
@@ -304,14 +302,11 @@ def wallHeatMapPlot(data, bins = 100, blue = "450E-9", uv = "121.567E-9", logsca
 
 # Bottom of sample cell is assumed to be at z=0
 
-def main():
+def main(fileName = fileName, plot_exitHistogram = plot_exitHistogram, plot_angleDistribution = plot_angleDistribution, 
+         plot_xyPlanePlot = plot_xyPlanePlot, plot_WallHeatMap = plot_WallHeatMap):
     
     # Read data from file
     data = rawJSONData(fileName=fileName) 
-    
-    # Check the metadata of the simulation
-    cellexit = {"bot": 0, "top": data["metadata"]["l_cell"]}
-    totalPhotons = data["metadata"]["simulations"]
 
     #=======================PLOTS===================================================================================0
     if plot_exitHistogram:

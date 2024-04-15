@@ -23,9 +23,9 @@ import FileHandler as fh
 filename = "simulation"
 output = "json" # "dat" or "json"
 # Number of particles to simulate
-simulations = 100000
+simulations = 20000
 # Number of wall sections to divide the cell into (1 to n)
-wall_sections = 1500
+wall_sections = 5
 # Cell parameters:
 shape = "cylinder"
 r_cell = 5E-3 # Radius of the cell [m]
@@ -34,7 +34,7 @@ r_cell = 1
 l_cell = 10
 # Gas cloud parameters:
 gas_height = 10E-3 # Height of the gas cloud [m]
-gas_offset = 5E-3 # Offset of the gas cloud from the cell bottom [m]
+gas_offset = l_cell-5E-3 # Offset of the gas cloud from the cell bottom [m]
 gas_radius = 1E-3 # Radius of the gas cloud [m]
 ### End of simulation settings ###
 

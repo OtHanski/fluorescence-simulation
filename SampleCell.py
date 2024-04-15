@@ -138,6 +138,7 @@ class SampleCell:
         zhit = z1 + ((w1 - r1) * (z2 - z1)) / (r2 - r1 - w2 + w1)
 
         poshit = position + transit * (zhit - z_start)
+        surfacenormal = np.array([poshit[0], poshit[1], 0])
 
         # Resolve whether the photon reflects, absorbs or converts
         event = np.random.choice(["specular", "diffuse", "absorption", "conversion"],
@@ -161,7 +162,6 @@ class SampleCell:
         if event == "specular":
             # Reflect direction specularly
             try:
-                surfacenormal = np.array([poshit[0], poshit[1], 0])
                 refdir = direction - 2 * np.dot(direction, surfacenormal) * surfacenormal / np.linalg.norm(surfacenormal)**2
             except Exception as er:
                 raise er
