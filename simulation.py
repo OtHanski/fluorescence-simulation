@@ -20,12 +20,12 @@ from SampleCell import SampleCell
 import FileHandler as fh
 
 ### Simulation settings ###
-filename = "simulation20240411_1"
-output = "dat" # "dat" or "json"
+filename = "simulation20240415_2"
+output = "json" # "dat" or "json"
 # Number of particles to simulate
 simulations = 100000
 # Number of wall sections to divide the cell into (1 to n)
-wall_sections = 1500
+wall_sections = 1000
 # Cell parameters:
 shape = "cylinder"
 r_cell = 5E-3 # Radius of the cell [m]
@@ -34,7 +34,7 @@ l_cell = 100E-3 # Length of the cell [m]
 #l_cell = 10
 # Gas cloud parameters:
 gas_height = 10E-3 # Height of the gas cloud [m]
-gas_offset = 50E-3 # Offset of the gas cloud from the cell bottom [m]
+gas_offset = l_cell-50E-3 # Offset of the gas cloud from the cell bottom [m]
 gas_radius = 1E-3 # Radius of the gas cloud [m]
 ### End of simulation settings ###
 
@@ -103,7 +103,8 @@ def simulate_json(sampCell = None, filename = filename, simulations = simulation
         if (i+1) % min(int(simulations/10), 25000) == 0:
             print(f"\nSimulating photon {i+1}/{simulations}, time elapsed: {time.time()-starttime:.2f}s\n")
         pos = randomGasPoint()
-        phot = photon(sampCell=sampCell, position=pos, direction=np.array([0.02,0,1]), id = i+1)
+        # , direction=np.array([0.02,0,1])
+        phot = photon(sampCell=sampCell, position=pos, id = i+1)
         try:
             result = phot.simulate()
             data["photons"][i+1] = phot.data_to_dict()
