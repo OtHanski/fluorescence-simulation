@@ -26,7 +26,8 @@ import simulation
 # Test flags
 test_cell = 0
 test_gas = 0
-test_sim = 1
+test_sim = 0
+test_hits = 1
 
 # Sample cell test settings
 timetest = 1
@@ -110,6 +111,28 @@ def test_simulation():
         phot = photon(sampCell=speccell, position=pos, direction=direc, id = i+1)
         phot.simulate(verbose = True)
 
+def test_hit_wall():
+    # Find the bug in the hit_wall function
+    samples = 100
+    z = np.linspace(0,10,samples)
+    r = np.ones(samples)
+    normalcell = SampleCell(z, r, samples = samples)
+
+    # Generate fully specular cell
+    specrefl = {"121.567E-9": np.zeros(samples-1)+1, "450E-9": np.zeros(samples-1)+1}
+    diffrefl = {"121.567E-9": np.zeros(samples-1), "450E-9": np.zeros(samples-1)}
+    absprob = {"121.567E-9": np.zeros(samples-1), "450E-9": np.zeros(samples-1)}
+    WLconversion = {"121.567E-9": np.zeros(samples-1), "450E-9": np.zeros(samples-1)}
+    speccell = SampleCell(z, r, specrefl=specrefl, diffrefl=diffrefl, absprob=absprob, 
+                          WLconversion=WLconversion, samples=samples)
+
+    simulations = 1
+    for i in range(simulations):
+        theta = 12/25 * np.pi
+        pos = np.array([0,0,5])
+        direc = np.array([np.sin(theta), 0, np.cos(theta)])
+        phot = photon(sampCell=speccell, position=pos, direction=direc, id = i+1)
+        phot.simulate(verbose = True)
 
 
 
@@ -143,3 +166,5 @@ if __name__ == "__main__":
         test_Gas_Generation()
     if test_sim:
         test_simulation()
+    if test_hits:
+        test_hit_wall()

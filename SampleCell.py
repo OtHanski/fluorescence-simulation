@@ -72,7 +72,7 @@ class SampleCell:
         for i in range(self.samp-1):
             self.wall[i] = (r[i+1]-r[i])/(z[i+1]-z[i])
     
-    def hit_wall(self, position = [0,0,0], direction = [1,1,1], wavelength:str = "450E-9", debug = 0):
+    def hit_wall(self, position = [0,0,0], direction = [1,1,1], wavelength:str = "450E-9", verbose = 0):
         """
         Given a photon at position and direction, check if it hits the wall of the cell.
 
@@ -130,15 +130,27 @@ class SampleCell:
             
         # idhits returns all "hits", we only want first one.
         idhit = idhits[0][0]
+        print(idhit,z_index)
 
-        # Linear interpolation to find exact hit location
-        r1, r2 = r_path[idhit], r_path[idhit+1]
-        w1, w2 = self.r[idhit], self.r[idhit+1]
-        z1, z2 = self.z[idhit], self.z[idhit+1]
-        zhit = z1 + ((w1 - r1) * (z2 - z1)) / (r2 - r1 - w2 + w1)
+        # If the photon hits the wall at the same z-index as the start, we need to handle it differently
+        if idhit == z_index:
+            pass
+        else:
+            # Linear interpolation to find exact hit location
+            r1, r2 = r_path[idhit], r_path[idhit+1]
+            w1, w2 = self.r[idhit], self.r[idhit+1]
+            z1, z2 = self.z[idhit], self.z[idhit+1]
+            zhit = z1 + ((w1 - r1) * (z2 - z1)) / ((r2 - r1) - (w2 - w1))
+            print("z and rs ",self.z[idhit-2:idhit+2], r_path[idhit-2:idhit+2])
 
-        poshit = position + transit * (zhit - z_start)
-        surfacenormal = self.get_surfacenormal(poshit)
+            poshit = position + transit * (zhit - z_start)
+            surfacenormal = self.get_surfacenormal(poshit)
+
+        if verbose:
+            print(f"Photon starting at {position} with direction {direction} hit wall at {poshit} with surfacenormal {surfacenormal}\n\
+                    Hit wall between z-indices {idhit}, {idhit+1} with r {r_path[idhit]}, {r_path[idhit+1]}\n\
+                    This was between path points {pos_path[idhit]}, {pos_path[idhit+1]}")
+        print(f"zhit: {zhit}, z1: {z1}, z2: {z2}, r1: {r1}, r2: {r2}, w1: {w1}, w2: {w2}\n")
 
         # Resolve whether the photon reflects, absorbs or converts
         event = np.random.choice(["specular", "diffuse", "absorption", "conversion"],
@@ -177,7 +189,9 @@ class SampleCell:
         # Return the normal vector of a wall at a given position.
         x, y, z = pos
         wallslope = self.wall[self.get_z_index(z)]
-        return np.array([-x, -y, -wallslope])
+        normal = np.array([-x, -y, -wallslope])
+        normal = normal / np.linalg.norm(normal)
+        return normal
 
     def randomvec(self):
         """Generates a random unit vector in 3D space. Uses spherical 
@@ -224,6 +238,13 @@ class SampleCell:
 
         return reflectionvector
         
+    def get_hit_location(self, startpos, dir):
+        """Given a starting position and direction, find the location of the next wall hit.
+        
+        Returns:
+            np.ndarray (x,y,z): Location of wall hit
+            int: index of wall hit"""
+        pass
 
     def get_absorption_probability(self, wavelength,z):
         # Return the absorption probability for a given wavelength

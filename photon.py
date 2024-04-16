@@ -70,7 +70,7 @@ class photon:
         try:
             if verbose:
                 np.set_printoptions(precision=2)
-                print(f"\nPhoton {self.id} sim start at {self.pos} with direction {self.direc} magnitude {np.sqrt(np.dot(self.direc,self.direc)):.2f}\n and wavelength {self.wavelength}")
+                print(f"\n\n\n\t\tNEW SIM START\nPhoton {self.id} sim start at {self.pos} with direction {self.direc} magnitude {np.sqrt(np.dot(self.direc,self.direc)):.2f}\n and wavelength {self.wavelength}")
             while True:
                 if self.logold:
                     self.oldevent = self.event
@@ -78,7 +78,7 @@ class photon:
                     self.olddirec = self.direc
 
                 hit = self.sampCell.hit_wall(position=self.pos, direction=self.direc, 
-                                            wavelength=self.wavelength, debug = self.debug)
+                                            wavelength=self.wavelength, verbose = verbose)
                 self.event = hit[3]
                 self.pos = hit[0]
                 self.direc = hit[1]
