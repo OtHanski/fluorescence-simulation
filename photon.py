@@ -68,6 +68,9 @@ class photon:
         """Simulates photon in sampCell.
         Returns (position, direction, num of wall interactions, wavelength, exit/absorp)."""
         try:
+            if verbose:
+                np.set_printoptions(precision=2)
+                print(f"\nPhoton {self.id} sim start at {self.pos} with direction {self.direc} magnitude {np.sqrt(np.dot(self.direc,self.direc)):.2f}\n and wavelength {self.wavelength}")
             while True:
                 if self.logold:
                     self.oldevent = self.event
@@ -80,7 +83,8 @@ class photon:
                 self.pos = hit[0]
                 self.direc = hit[1]
                 if verbose:
-                    print(f"Photon {self.id} at {self.pos} with direction {self.direc} magnitude {np.sqrt(np.dot(self.direc,self.direc))}\n and wavelength {self.wavelength}. Latest event {self.event}.")
+                    np.set_printoptions(precision=2)
+                    print(f"Photon {self.id} at {self.pos} radius {np.sqrt(self.pos[0]**2+self.pos[1]**2):.2f} with direction {self.direc} magnitude {np.sqrt(np.dot(self.direc,self.direc)):.2f}\n and wavelength {self.wavelength}. Latest event {self.event}.")
                 if hit[3] == "exit":
                     """ Commented out to avoid excessive printouts, add back if problems arise
                     if self.debug: 
