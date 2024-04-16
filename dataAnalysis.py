@@ -12,11 +12,15 @@ if not fileName:
     print(fileName)
 
 top = 1 # Picks photons that exited at sample cell top
+photonsAbsorbedLogScale = 0
+
 plot_exitHistogram = 1
-plot_angleDistribution = 0
-plot_xyPlane = 0
-plot_wallHeatMap = 0
-plot_photonsAbsorbed = 0
+plot_angleDistribution = 1
+plot_xyPlane = 1
+plot_wallHeatMap = 1
+plot_photonsAbsorbed = 1
+plot_photonBounces = 1
+plot_exitAngles = 1
 printInfo = 1
 
 saveFigure = 0
@@ -25,6 +29,8 @@ angDistImName = "data/20240411/simAngTop20240411_1.png"
 xyPlaneImName = "data/20240411/simXYTop20240411_1.png"
 wallHeatMapImName = "data/20240411/wallHeatMap20240411_1.png"
 numOfWallHitsImName = "data/20240411/wallHitsHist20240411_1.png"
+exitAnglesImName = ""
+photonsAbsorbedImName = ""
 
 #===========================NOTES==========================================================================
 
@@ -245,6 +251,16 @@ def main():
     exitAngleBlue = np.array(exitAngleBlue)
     exitAngleUV = np.array(exitAngleUV)
 
+    absZBlue = []
+    absZUV = []
+    for i in range(len(wavelenAbs)):
+        if wavelenAbs[i].strip() == "450E-9":
+            absZBlue.append(absZ[i])
+        else:
+            absZUV.append(absZ[i])
+    absZBlue = np.array(absZBlue)
+    absZUV = np.array(absZUV)
+
     # Percentage reached exit...
     reachedExit = len(exitPos)
     percentage = 100 * reachedExit / totalPhotons
@@ -284,12 +300,23 @@ def main():
     for point in np.nditer(absZBin):
         absZperBin[point] += 1
 
+    angleDigBins = 90
+    angleDigBlue = np.digitize(exitAngleBlue, np.linspace(0, 90, angleDigBins))
+    numberOfAngleBlue = np.empty(angleDigBins)
+    for i in range(angleDigBins):
+        numberOfAngleBlue[i] = len(np.where(angleDigBlue == i)[0])
+
+    angleDigUV = np.digitize(exitAngleUV, np.linspace(0, 90, angleDigBins))
+    numberOfAngleUV = np.empty(angleDigBins)
+    for i in range(angleDigBins):
+        numberOfAngleUV[i] = len(np.where(angleDigUV == i)[0])
+
     #=======================PLOTS===================================================================================0
 
     if plot_exitHistogram:
         fig1 = plt.figure(1)
-        plt.hist(blue/sampCellRadius, range=(0, 1), bins=40, color='lightskyblue', rwidth=0.75, alpha=0.8, label="Blue")
-        plt.hist(uv/sampCellRadius, range=(0, 1), bins=40, color="purple", rwidth=0.75, alpha=0.45, label="UV")
+        plt.hist(blue/sampCellRadius, range=(0, 1), bins=40, color='skyblue', rwidth=0.8, alpha=1, label="Blue")
+        plt.hist(uv/sampCellRadius, range=(0, 1), bins=40, color="purple", rwidth=0.8, alpha=0.5, label="UV")
         plt.xlabel("$r$ / R")
         plt.ylabel("Number of photons")
         if top:
@@ -305,7 +332,8 @@ def main():
 
     if plot_angleDistribution:
         fig2 = plt.figure(2)
-        plt.scatter(exitR/sampCellRadius, ang, s=4, marker='.', c="mediumorchid")
+        plt.scatter(blue/sampCellRadius, exitAngleBlue, s=4, marker='.', c="skyblue")
+        plt.scatter(uv/sampCellRadius, exitAngleUV, s=4, marker='.', c="mediumorchid")
         plt.xlabel("$r$ / R")
         plt.ylabel("Angle / deg")
         if top:
@@ -354,15 +382,43 @@ def main():
             plt.savefig(wallHeatMapImName)
         plt.show()
 
-    if plot_photonsAbsorbed:
+    if plot_photonBounces:
         # To be continued
         fig5 = plt.figure(5)
-        plt.hist(absHits, bins=101, range=(0, 100), color='cornflowerblue', rwidth=0.75, alpha=0.5, align="mid", label="Absorbed")
-        plt.hist(exitHits, bins=101, range=(0, 100), color='mediumorchid', rwidth=0.75, alpha=0.5, label="Exited")
+        plt.hist(absHits, bins=185, range=(0, 375), color='skyblue', rwidth=1, alpha=1, label="Absorbed")
+        plt.hist(exitHits, bins=185, range=(0, 375), color='purple', rwidth=1, alpha=0.5, label="Exited")
+        plt.yscale("log")
+        plt.xlabel("Number of wall hits")
+        plt.ylabel("Number of photons")
         plt.legend()
         plt.tight_layout()
         if saveFigure:
             plt.savefig(numOfWallHitsImName)
+        plt.show()
+
+    if plot_exitAngles:
+        fig7 = plt.figure(7)
+        plt.plot(np.linspace(0, 90, angleDigBins), numberOfAngleBlue, color="skyblue", label="Blue")
+        plt.plot(np.linspace(0, 90, angleDigBins), numberOfAngleUV, color="mediumorchid", label="UV")
+        plt.xlabel("Angle / deg")
+        plt.ylabel("Number of photons")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    if plot_photonsAbsorbed:
+        fig4 = plt.figure(num=4)
+        plt.hist(absZBlue/sampCellZ, bins=50, color='skyblue', rwidth=0.8, alpha=1, label="Blue")
+        plt.hist(absZUV/sampCellZ, bins=50, color="purple", rwidth=0.8, alpha=0.5, label="UV")
+        plt.title("Photons absorbed")
+        plt.xlabel("$z$ / h$_{\mathrm{cell}}$")
+        plt.ylabel("Number of photons")
+        plt.legend()
+        plt.tight_layout()
+        if photonsAbsorbedLogScale:
+            plt.yscale("log")
+        if saveFigure:
+            plt.savefig(photonsAbsorbedImName)
         plt.show()
 
     if printInfo:
