@@ -21,6 +21,7 @@ for both angles.
 import numpy as np
 import math
 np.seterr(all = 'raise')
+np.set_printoptions(precision=4)
 
 class SampleCell:
     def __init__(self, 
@@ -62,6 +63,9 @@ class SampleCell:
 
         # Calculate the slope of the wall against z-axis, positive for increasing r
         self.wall = np.zeros(self.samp-1)
+        # Check if perfect cylinder
+        self.cylinder = not np.any(self.wall)
+        
 
         # Define the probabilities of reflection and absorption
         self.specular_probability = specrefl
@@ -84,73 +88,21 @@ class SampleCell:
             bool: exit status
             str: event type
         """
-        # Check location of wall hit, return exit status, new position and (specular) direction.
-        # If the photon exits out of either end of the cell, return the exit location and direction.
-        # Direction should be a unit vector of the form [dx,dy,dz] for easy calculations. 
 
-        # Define transit vector for easy calculations of path.
-        transit = direction / direction[2]
-        
-        z_start = position[2]
-        # Check direction of photon
-        if direction[2] > 0:
-            z_dir = True
-        else:
-            z_dir = False
-        # Find the location of z_start in the z array:
-        z_index = self.get_z_index(z_start)
-
-        # Construct the r coordinates of the photon path
-        r_path = np.zeros((self.samp))
-        pos_path = np.zeros((self.samp,3))
-        pos_array = np.tile(position, (self.samp,1))
-
-        try: 
-            if z_dir:
-                pos_path[z_index+1:] = pos_array[z_index+1:] + transit * (self.z[z_index+1:].reshape(-1,1) - z_start)
-                r_path[z_index:] =  np.sqrt(pos_path[z_index:,0]**2 + pos_path[z_index:,1]**2)
-            else:
-                pos_path[:z_index-1] = pos_array[:z_index-1] - transit * (self.z[:z_index-1].reshape(-1,1) - z_start)
-                r_path[:z_index] =  np.sqrt(pos_path[:z_index,0]**2 + pos_path[:z_index,1]**2)
-        except FloatingPointError as er:
-            raise er
-
-        # Calculate exact location of wall hit via linear interpolation
-        # First, locate the index of the wall hit
-        idhits = np.argwhere(np.diff(np.sign(r_path - self.r)) != 0)
-
-        # If no wall hit, return the position and direction of the photon plus the exit status (true)
-        if len(idhits) == 0:
-            if z_dir:
-                exitpos = position + transit * (self.z[-1] - z_start)
-                return exitpos, direction, True, "exit"
-            else:
-                exitpos = position + transit * (self.z[0] - z_start)
-                return exitpos, direction, True, "exit"
-            
-        # idhits returns all "hits", we only want first one.
-        idhit = idhits[0][0]
-        print(idhit,z_index)
-
-        # If the photon hits the wall at the same z-index as the start, we need to handle it differently
-        if idhit == z_index:
-            pass
-        else:
-            # Linear interpolation to find exact hit location
-            r1, r2 = r_path[idhit], r_path[idhit+1]
-            w1, w2 = self.r[idhit], self.r[idhit+1]
-            z1, z2 = self.z[idhit], self.z[idhit+1]
-            zhit = z1 + ((w1 - r1) * (z2 - z1)) / ((r2 - r1) - (w2 - w1))
-            print("z and rs ",self.z[idhit-2:idhit+2], r_path[idhit-2:idhit+2])
-
-            poshit = position + transit * (zhit - z_start)
+        if self.cylinder:
+            # Check if the photon hits the cylinder wall
+            poshit, exitstatus = self.get_hit_location_cylinder(position, direction, verbose = verbose)
+            z_index = self.get_z_index(poshit[2])# Fetch surface normal at hit location
             surfacenormal = self.get_surfacenormal(poshit)
 
-        if verbose:
-            print(f"Photon starting at {position} with direction {direction} hit wall at {poshit} with surfacenormal {surfacenormal}\n\
-                    Hit wall between z-indices {idhit}, {idhit+1} with r {r_path[idhit]}, {r_path[idhit+1]}\n\
-                    This was between path points {pos_path[idhit]}, {pos_path[idhit+1]}")
-        print(f"zhit: {zhit}, z1: {z1}, z2: {z2}, r1: {r1}, r2: {r2}, w1: {w1}, w2: {w2}\n")
+        else:
+            # Check if the photon hits the general wall
+            poshit, direction, exit, event = self.get_hit_location_general(position, direction, verbose = verbose)
+            z_index = self.get_z_index(poshit[2])
+        
+        
+        if exitstatus:
+            return poshit, direction, True, "exit"
 
         # Resolve whether the photon reflects, absorbs or converts
         event = np.random.choice(["specular", "diffuse", "absorption", "conversion"],
@@ -238,13 +190,117 @@ class SampleCell:
 
         return reflectionvector
         
-    def get_hit_location(self, startpos, dir):
-        """Given a starting position and direction, find the location of the next wall hit.
+    def get_hit_location_cylinder(self, startpos, dir, verbose = False):
+        """Given a starting position and direction, find the location of the next wall hit in a perfect cylinder (r(z) = constant).
         
         Returns:
             np.ndarray (x,y,z): Location of wall hit
-            int: index of wall hit"""
-        pass
+            bool: exit status"""
+        
+        # t^2 * (dx^2 + dy^2) + 2t(dx*x0 + dy*y0) + x0^2 + y0^2 = r^2
+        a = dir[0]**2 + dir[1]**2
+        b = 2*(dir[0]*startpos[0] + dir[1]*startpos[1])
+        c = startpos[0]**2 + startpos[1]**2 - self.r[0]**2 # We can use r[0] as the radius is constant
+        t = np.roots([a,b,c])
+        # We want the positive solution
+        t = t[t != 0]
+        t = t[0]
+        t = (-2*(dir[0]*startpos[0] + dir[1]*startpos[1]) + \
+             np.sqrt(4*(dir[0]*startpos[0] + dir[1]*startpos[1])**2 - 4*(dir[0]**2 + dir[1]**2)*(startpos[0]**2 + startpos[1]**2 - self.r[0]**2)))\
+             / (2*(dir[0]**2 + dir[1]**2))
+        hit = startpos + t*dir
+
+        # Check for exit status
+        exitstatus =  hit[2] > self.z[-1] or hit[2] < self.z[0]
+        if verbose: 
+            print(f"t: {t:.4f}, hit: {hit}, startpos: {startpos}")
+            print(hit, np.sqrt(hit[0]**2 + hit[1]**2))
+            print(hit[2] > self.z[-1], hit[2] < self.z[0], exitstatus)
+        tcorr = 0
+        if exitstatus:
+            exitZ = self.z[-1] if hit[2] > self.z[-1] else self.z[0]
+            hit = startpos + (exitZ - startpos[2]) * dir/dir[2]
+        else:
+            # Check if the hit is outside the cylinder, if it is, likely floating point error => correct
+            while np.sqrt(hit[0]**2 + hit[1]**2) > self.r[self.get_z_index(hit[2])]:
+                # Correct the hit location
+                if verbose: print("correcting")
+                hit = startpos + (t-1E-8*tcorr)*dir
+                tcorr += 1
+        if verbose:
+            print(f"Photon starting at {startpos} with direction {dir} {'hit wall' if not exitstatus else 'exited'} at {hit}, \nwith t {t:.4f}, tcorr {tcorr} and r {np.sqrt(hit[0]**2 + hit[1]**2):.4f}\n")
+        
+        return hit, exitstatus
+
+    def get_hit_location_general(self, position, direction, verbose = False):
+        """Old one, not working properly"""
+        # Check location of wall hit, return exit status, new position and (specular) direction.
+        # If the photon exits out of either end of the cell, return the exit location and direction.
+        # Direction should be a unit vector of the form [dx,dy,dz] for easy calculations. 
+
+        # Define transit vector for easy calculations of path.
+        transit = direction / direction[2]
+        
+        z_start = position[2]
+        # Check direction of photon
+        if direction[2] > 0:
+            z_dir = True
+        else:
+            z_dir = False
+        # Find the location of z_start in the z array:
+        z_index = self.get_z_index(z_start)
+
+        # Construct the r coordinates of the photon path
+        r_path = np.zeros((self.samp))
+        pos_path = np.zeros((self.samp,3))
+        pos_array = np.tile(position, (self.samp,1))
+
+        try: 
+            if z_dir:
+                pos_path[z_index+1:] = pos_array[z_index+1:] + transit * (self.z[z_index+1:].reshape(-1,1) - z_start)
+                r_path[z_index:] =  np.sqrt(pos_path[z_index:,0]**2 + pos_path[z_index:,1]**2)
+            else:
+                pos_path[:z_index-1] = pos_array[:z_index-1] - transit * (self.z[:z_index-1].reshape(-1,1) - z_start)
+                r_path[:z_index] =  np.sqrt(pos_path[:z_index,0]**2 + pos_path[:z_index,1]**2)
+        except FloatingPointError as er:
+            raise er
+
+        # Calculate exact location of wall hit via linear interpolation
+        # First, locate the index of the wall hit
+        idhits = np.argwhere(np.diff(np.sign(r_path - self.r)) != 0)
+
+        # If no wall hit, return the position and direction of the photon plus the exit status (true)
+        if len(idhits) == 0:
+            if z_dir:
+                exitpos = position + transit * (self.z[-1] - z_start)
+                return exitpos, direction, True, "exit"
+            else:
+                exitpos = position + transit * (self.z[0] - z_start)
+                return exitpos, direction, True, "exit"
+            
+        # idhits returns all "hits", we only want first one.
+        idhit = idhits[0][0]
+        print(idhit,z_index)
+
+        # If the photon hits the wall at the same z-index as the start, we need to handle it differently
+        if idhit == z_index:
+            pass
+        else:
+            # Linear interpolation to find exact hit location
+            r1, r2 = r_path[idhit], r_path[idhit+1]
+            w1, w2 = self.r[idhit], self.r[idhit+1]
+            z1, z2 = self.z[idhit], self.z[idhit+1]
+            zhit = z1 + ((w1 - r1) * (z2 - z1)) / ((r2 - r1) - (w2 - w1))
+            print("z and rs ",self.z[idhit-2:idhit+2], r_path[idhit-2:idhit+2])
+
+            poshit = position + transit * (zhit - z_start)
+            surfacenormal = self.get_surfacenormal(poshit)
+
+        if verbose:
+            print(f"Photon starting at {position} with direction {direction} hit wall at {poshit} with surfacenormal {surfacenormal}\n\
+                    Hit wall between z-indices {idhit}, {idhit+1} with r {r_path[idhit]}, {r_path[idhit+1]}\n\
+                    This was between path points {pos_path[idhit]}, {pos_path[idhit+1]}")
+        print(f"zhit: {zhit}, z1: {z1}, z2: {z2}, r1: {r1}, r2: {r2}, w1: {w1}, w2: {w2}\n")
 
     def get_absorption_probability(self, wavelength,z):
         # Return the absorption probability for a given wavelength

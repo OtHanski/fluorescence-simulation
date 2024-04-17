@@ -23,9 +23,9 @@ import FileHandler as fh
 filename = "simulation"
 output = "json" # "dat" or "json"
 # Number of particles to simulate
-simulations = 750
+simulations = 100000
 # Number of wall sections to divide the cell into (1 to n)
-wall_sections = 5
+wall_sections = 150
 # Cell parameters:
 shape = "cylinder"
 r_cell = 5E-3 # Radius of the cell [m]
@@ -34,7 +34,7 @@ r_cell = 1
 l_cell = 10
 # Gas cloud parameters:
 gas_height = 10E-3 # Height of the gas cloud [m]
-gas_offset = 5E-3 # Offset of the gas cloud from the cell bottom [m]
+gas_offset = 4500E-3 # Offset of the gas cloud from the cell bottom [m]
 gas_radius = 1E-3 # Radius of the gas cloud [m]
 ### End of simulation settings ###
 
@@ -106,7 +106,7 @@ def simulate_json(sampCell = None, filename = filename, simulations = simulation
         # , direction=np.array([0.02,0,1])
         phot = photon(sampCell=sampCell, position=pos, id = i+1)
         try:
-            result = phot.simulate(verbose = True)
+            result = phot.simulate(verbose = False)
             data["photons"][i+1] = phot.data_to_dict()
         except Exception as e:
             print(f"Error at photon {i+1}: {e}")
