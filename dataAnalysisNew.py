@@ -15,11 +15,15 @@ plot_angleDistribution = 1
 plot_xyPlanePlot = 1
 plot_WallHeatMap = 1
 
+
+plt.rcParams['figure.figsize'] = (12, 12)
 posDistImName = "data/simDistTop.png"
 angDistImName = "data/simAngTopSampleInTheMiddle.png"
 xyPlaneImName = "data/simXYBotSampleInTheMiddle.png"
 wallHeatMapImName = "data/wallHeatMapSampleInTheMiddle.png"
 numOfWallHitsImName = "data/20240411/wallHitsHist20240411_1.png"
+
+global dotsize
 
 #===========================NOTES==========================================================================
 
@@ -242,11 +246,11 @@ def angleDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", s
     for key in angdata:
         if angdata[key].size > 0:
             if key == blue:
-                plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', c="cornflowerblue", label = "Blue")
+                plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=dotsize, marker='.', c="cornflowerblue", label = "Blue")
             elif key == uv:
-                plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', c="mediumorchid", label = "UV")
+                plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=dotsize, marker='.', c="mediumorchid", label = "UV")
             else:
-                plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', label = f"{key}")
+                plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=dotsize, marker='.', label = f"{key}")
         
     plt.xlabel("$r$ / R")
     plt.ylabel("Angle / deg")
@@ -268,9 +272,9 @@ def xyPlanePlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure 
     exitPos = getExitPosition(data, exit = exit, wavelengths = [blue, uv])
 
     if exitPos[blue].size > 0:
-        axes.scatter(exitPos[blue][:,0]/CellR, exitPos[blue][:,1]/CellR, marker=".", s=4, color="skyblue", label = "Blue")
+        axes.scatter(exitPos[blue][:,0]/CellR, exitPos[blue][:,1]/CellR, marker=".", s=dotsize, color="skyblue", label = "Blue")
     if exitPos[uv].size > 0:
-        axes.scatter(exitPos[uv][:,0]/CellR, exitPos[uv][:,1]/CellR, marker=".", s=4, color="mediumorchid", label = "UV")
+        axes.scatter(exitPos[uv][:,0]/CellR, exitPos[uv][:,1]/CellR, marker=".", s=dotsize, color="mediumorchid", label = "UV")
     axes.set_xlabel("$x$ / R")
     axes.set_ylabel("$y$ / R")
     if exit == "top":
@@ -312,7 +316,12 @@ def main(fileName = fileName, plot_exitHistogram = plot_exitHistogram, plot_angl
          plot_xyPlanePlot = plot_xyPlanePlot, plot_WallHeatMap = plot_WallHeatMap):
     
     # Read data from file
-    data = rawJSONData(fileName=fileName) 
+    data = rawJSONData(fileName=fileName)
+
+    # Set dotsize according to sample size
+    global dotsize 
+    dotsize = 16*(20000/data["metadata"]["simulations"])**0.85 # Exponent is arbitrary, this one just looks good
+    print("Dotsize: ", dotsize)
 
     #=======================PLOTS===================================================================================0
     if plot_exitHistogram:
