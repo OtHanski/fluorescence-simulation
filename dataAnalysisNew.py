@@ -174,12 +174,12 @@ def getAngles(data, exit = "top", wavelengths = "all"):
 
     # Calculate the radii of the exit positions
     for wavelength in Exits:
-        print("WL: ", wavelength)
+        #print("WL: ", wavelength)
         Exits[wavelength] = np.array([[Exits[wavelength][key]["position"][0]**2 + Exits[wavelength][key]["position"][1]**2, Exits[wavelength][key]["angle"]] for key in Exits[wavelength]])
-        print(Exits[wavelength])
+        #print(Exits[wavelength])
         if Exits[wavelength].size > 0:
-            Exits[wavelength][0] = np.sqrt(Exits[wavelength][0])
-            Exits[wavelength][1] = angleToZ(Exits[wavelength][1])
+            Exits[wavelength][:,0] = np.sqrt(Exits[wavelength][:,0])
+            Exits[wavelength][:,1] = angleToZ(Exits[wavelength][:,1])
     
     return Exits
 

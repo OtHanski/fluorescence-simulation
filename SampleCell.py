@@ -93,6 +93,8 @@ class SampleCell:
             # Check if the photon hits the cylinder wall
             poshit, exitstatus = self.get_hit_location_cylinder(position, direction, verbose = verbose)
             z_index = self.get_z_index(poshit[2])# Fetch surface normal at hit location
+            if z_index < 0: z_index = 0
+            if z_index >= len(self.z)-1: z_index = len(self.z)-2
             surfacenormal = self.get_surfacenormal(poshit)
 
         else:

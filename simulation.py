@@ -23,19 +23,17 @@ import FileHandler as fh
 filename = "simulation"
 output = "json" # "dat" or "json"
 # Number of particles to simulate
-simulations = 100000
+simulations = 500000
 # Number of wall sections to divide the cell into (1 to n)
 wall_sections = 150
 # Cell parameters:
 shape = "cylinder"
 r_cell = 5E-3 # Radius of the cell [m]
-l_cell = 100E-3 # Length of the cell [m]
-r_cell = 1
-l_cell = 10
+l_cell = 120E-3 # Length of the cell [m]
 # Gas cloud parameters:
 gas_height = 10E-3 # Height of the gas cloud [m]
-gas_offset = 4500E-3 # Offset of the gas cloud from the cell bottom [m]
-gas_radius = 1E-3 # Radius of the gas cloud [m]
+gas_offset = 5E-3 # Offset of the gas cloud from the cell bottom [m]
+gas_radius = 1.5E-3 # Radius of the gas cloud [m]
 ### End of simulation settings ###
 
 def randomGasPoint(gas_height = gas_height, gas_offset = gas_offset, gas_radius = gas_radius):
