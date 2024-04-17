@@ -21,6 +21,7 @@ for both angles.
 import numpy as np
 import math
 np.seterr(all = 'raise')
+np.set_printoptions(precision=4)
 
 class SampleCell:
     def __init__(self, 
@@ -60,8 +61,11 @@ class SampleCell:
         self.samp = samples
         self.wavelengths = wavelengths
 
-        # Calculate the angle of the wall against the z-axis
+        # Calculate the slope of the wall against z-axis, positive for increasing r
         self.wall = np.zeros(self.samp-1)
+        # Check if perfect cylinder
+        self.cylinder = not np.any(self.wall)
+        
 
         # Define the probabilities of reflection and absorption
         self.specular_probability = specrefl
@@ -70,9 +74,9 @@ class SampleCell:
         self.WLconversion = WLconversion
 
         for i in range(self.samp-1):
-            self.wall[i] = np.arctan((r[i+1]-r[i])/(z[i+1]-z[i]))
+            self.wall[i] = (r[i+1]-r[i])/(z[i+1]-z[i])
     
-    def hit_wall(self, position = [0,0,0], direction = [1,1,1], wavelength:str = "450E-9", debug = 0):
+    def hit_wall(self, position = [0,0,0], direction = [1,1,1], wavelength:str = "450E-9", verbose = 0):
         """
         Given a photon at position and direction, check if it hits the wall of the cell.
 
@@ -84,6 +88,154 @@ class SampleCell:
             bool: exit status
             str: event type
         """
+
+        if self.cylinder:
+            # Check if the photon hits the cylinder wall
+            poshit, exitstatus = self.get_hit_location_cylinder(position, direction, verbose = verbose)
+            z_index = self.get_z_index(poshit[2])# Fetch surface normal at hit location
+            if z_index < 0: z_index = 0
+            if z_index >= len(self.z)-1: z_index = len(self.z)-2
+            surfacenormal = self.get_surfacenormal(poshit)
+
+        else:
+            # Check if the photon hits the general wall
+            poshit, direction, exit, event = self.get_hit_location_general(position, direction, verbose = verbose)
+            z_index = self.get_z_index(poshit[2])
+        
+        
+        if exitstatus:
+            return poshit, direction, True, "exit"
+
+        # Resolve whether the photon reflects, absorbs or converts
+        event = np.random.choice(["specular", "diffuse", "absorption", "conversion"],
+                                 p = [self.specular_probability[wavelength][z_index-1], 
+                                      self.diffuse_probability[wavelength][z_index-1], 
+                                      self.absorption_probability[wavelength][z_index-1], 
+                                      self.WLconversion[wavelength][z_index-1]])
+
+        if event == "absorption":
+            # Absorbed photon should not have a new direction
+            return poshit, np.array([0,0,0]), False, event
+        
+        if event == "conversion":
+            # Convert wavelength, random direction
+            return poshit, self.randomreflection(surfacenormal), False, event
+
+        if event == "diffuse":
+            # Random direction
+            return poshit,  self.randomreflection(surfacenormal), False, event
+        
+        if event == "specular":
+            # Reflect direction specularly
+            try:
+                refdir = direction - 2 * np.dot(direction, surfacenormal) * surfacenormal / np.linalg.norm(surfacenormal)**2
+            except Exception as er:
+                raise er
+            return poshit, refdir, False, event
+
+    def get_z_index(self, z):
+        # Return the index of first element before z in the z array
+        
+        idx = np.searchsorted(self.z, z, side="left")
+        return idx-1
+
+    def get_surfacenormal(self, pos):
+        # Return the normal vector of a wall at a given position.
+        x, y, z = pos
+        wallslope = self.wall[self.get_z_index(z)]
+        normal = np.array([-x, -y, -wallslope])
+        normal = normal / np.linalg.norm(normal)
+        return normal
+
+    def randomvec(self):
+        """Generates a random unit vector in 3D space. Uses spherical 
+                coordinates to generate the vector to ensure uniform distribution.
+        
+        Returns:
+            np.ndarray (x,y,z): Random unit vector"""
+        theta = np.random.rand() * 2 * np.pi
+        phi = (np.random.rand()-0.5) * np.pi
+        z = np.sin(phi)
+        x = np.cos(theta) * np.cos(phi)
+        y = np.sin(theta) * np.cos(phi)
+        return np.array([x,y,z])
+
+    def randomreflection2(self, surfacenormal):
+        """Return a random reflection out of a surface direction given a normal vector of said surface
+        
+        Returns:
+            np.ndarray (x,y,z): Random reflection direction"""
+        # theta is the angle in the plane of the reflection surface,
+        # phi is the angle compared to normal vector (radial)
+        theta = np.random.rand() * 2 * np.pi
+        phi = np.random.rand() * np.pi/2
+
+        phi2 = np.arccos(np.dot(surfacenormal, np.array([0,0,1])))
+
+        # Calculate the new direction
+        reflectionvector = np.array([np.cos(theta) * np.cos(phi) * np.sin(phi2), 
+                                     np.sin(theta) * np.sin(phi) * np.cos(phi2), 
+                                     np.cos(phi) * np.sin(phi2)])
+
+        return reflectionvector
+    
+    def randomreflection(self, surfacenormal):
+        """Return a random reflection out of a surface direction given a normal vector of said surface
+        
+        Returns:
+            np.ndarray (x,y,z): Random reflection direction"""
+        # theta is the angle in the plane of the reflection surface,
+        # phi is the angle compared to normal vector (radial)
+        reflectionvector = np.zeros(3)
+        while not np.dot(surfacenormal, reflectionvector) > 0:
+            reflectionvector = self.randomvec()
+
+        return reflectionvector
+        
+    def get_hit_location_cylinder(self, startpos, dir, verbose = False):
+        """Given a starting position and direction, find the location of the next wall hit in a perfect cylinder (r(z) = constant).
+        
+        Returns:
+            np.ndarray (x,y,z): Location of wall hit
+            bool: exit status"""
+        
+        # t^2 * (dx^2 + dy^2) + 2t(dx*x0 + dy*y0) + x0^2 + y0^2 = r^2
+        a = dir[0]**2 + dir[1]**2
+        b = 2*(dir[0]*startpos[0] + dir[1]*startpos[1])
+        c = startpos[0]**2 + startpos[1]**2 - self.r[0]**2 # We can use r[0] as the radius is constant
+        t = np.roots([a,b,c])
+        # We want the positive solution
+        t = t[t != 0]
+        t = t[0]
+        t = (-2*(dir[0]*startpos[0] + dir[1]*startpos[1]) + \
+             np.sqrt(4*(dir[0]*startpos[0] + dir[1]*startpos[1])**2 - 4*(dir[0]**2 + dir[1]**2)*(startpos[0]**2 + startpos[1]**2 - self.r[0]**2)))\
+             / (2*(dir[0]**2 + dir[1]**2))
+        hit = startpos + t*dir
+
+        # Check for exit status
+        exitstatus =  hit[2] > self.z[-1] or hit[2] < self.z[0]
+        if verbose: 
+            print(f"t: {t:.4f}, hit: {hit}, startpos: {startpos}")
+            print(hit, np.sqrt(hit[0]**2 + hit[1]**2))
+            print(hit[2] > self.z[-1], hit[2] < self.z[0], exitstatus)
+        tcorr = 0
+        if exitstatus:
+            exitZ = self.z[-1] if hit[2] > self.z[-1] else self.z[0]
+            hit = startpos + (exitZ - startpos[2]) * dir/dir[2]
+        else:
+            # Check if the hit is outside the cylinder, if it is, likely floating point error => correct
+            while np.sqrt(hit[0]**2 + hit[1]**2) > self.r[self.get_z_index(hit[2])]:
+                # Correct the hit location
+                if verbose: print("correcting")
+                hit = startpos + (t-1E-8*tcorr)*dir
+                tcorr += 1
+        if verbose:
+            print(f"Photon starting at {startpos} with direction {dir} {'hit wall' if not exitstatus else 'exited'} at {hit}, \nwith t {t:.4f}, tcorr {tcorr} and r {np.sqrt(hit[0]**2 + hit[1]**2):.4f}\n")
+        
+        return hit, exitstatus
+
+    def get_hit_location_general(self, position, direction, verbose = False):
+        """Old one, not working properly"""
         # Check location of wall hit, return exit status, new position and (specular) direction.
         # If the photon exits out of either end of the cell, return the exit location and direction.
         # Direction should be a unit vector of the form [dx,dy,dz] for easy calculations. 
@@ -127,69 +279,30 @@ class SampleCell:
             else:
                 exitpos = position + transit * (self.z[0] - z_start)
                 return exitpos, direction, True, "exit"
+            
         # idhits returns all "hits", we only want first one.
         idhit = idhits[0][0]
+        print(idhit,z_index)
 
-        r1, r2 = r_path[idhit], r_path[idhit+1]
-        w1, w2 = self.r[idhit], self.r[idhit+1]
-        z1, z2 = self.z[idhit], self.z[idhit+1]
-        zhit = z1 + ((w1 - r1) * (z2 - z1)) / (r2 - r1 - w2 + w1)
-
-        poshit = position + transit * (zhit - z_start)
-
-        # Resolve whether the photon reflects, absorbs or converts
-        event = np.random.choice(["specular", "diffuse", "absorption", "conversion"],
-                                 p = [self.specular_probability[wavelength][z_index-1], 
-                                      self.diffuse_probability[wavelength][z_index-1], 
-                                      self.absorption_probability[wavelength][z_index-1], 
-                                      self.WLconversion[wavelength][z_index-1]])
-
-        if event == "absorption":
-            # Absorbed photon should not have a new direction
-            return poshit, np.array([0,0,0]), False, event
-        
-        if event == "conversion":
-            # Convert wavelength, random direction
-            return poshit, self.randomvec(), False, event
-
-        if event == "diffuse":
-            # Random direction
-            return poshit, self.randomvec(), False, event
-        
-        if event == "specular":
-            # Reflect direction specularly
-            try:
-                surfacenormal = np.array([poshit[0], poshit[1], 0])
-                refdir = direction - 2 * np.dot(direction, surfacenormal) * surfacenormal / np.linalg.norm(surfacenormal)**2
-            except Exception as er:
-                raise er
-            return poshit, refdir, False, event
-
-    def get_z_index(self, z):
-        # Return the index of z in the z array
-        
-        idx = np.searchsorted(self.z, z, side="left")
-        if idx > 0 and (idx == len(self.z) or math.fabs(z - self.z[idx-1]) < math.fabs(z - self.z[idx])):
-            return idx-1
+        # If the photon hits the wall at the same z-index as the start, we need to handle it differently
+        if idhit == z_index:
+            pass
         else:
-            return idx
+            # Linear interpolation to find exact hit location
+            r1, r2 = r_path[idhit], r_path[idhit+1]
+            w1, w2 = self.r[idhit], self.r[idhit+1]
+            z1, z2 = self.z[idhit], self.z[idhit+1]
+            zhit = z1 + ((w1 - r1) * (z2 - z1)) / ((r2 - r1) - (w2 - w1))
+            print("z and rs ",self.z[idhit-2:idhit+2], r_path[idhit-2:idhit+2])
 
-    def get_wall_angle(self, z):
-        # Return the angle of the wall at z
-        pass
+            poshit = position + transit * (zhit - z_start)
+            surfacenormal = self.get_surfacenormal(poshit)
 
-    def randomvec(self):
-        """Generates a random unit vector in 3D space. Uses spherical 
-                coordinates to generate the vector to ensure uniform distribution.
-        
-        Returns:
-            np.ndarray (x,y,z): Random unit vector"""
-        theta = np.random.rand() * 2 * np.pi
-        phi = (np.random.rand()-0.5) * np.pi
-        z = np.sin(phi)
-        x = np.cos(theta) * np.cos(phi)
-        y = np.sin(theta) * np.cos(phi)
-        return np.array([x,y,z])
+        if verbose:
+            print(f"Photon starting at {position} with direction {direction} hit wall at {poshit} with surfacenormal {surfacenormal}\n\
+                    Hit wall between z-indices {idhit}, {idhit+1} with r {r_path[idhit]}, {r_path[idhit+1]}\n\
+                    This was between path points {pos_path[idhit]}, {pos_path[idhit+1]}")
+        print(f"zhit: {zhit}, z1: {z1}, z2: {z2}, r1: {r1}, r2: {r2}, w1: {w1}, w2: {w2}\n")
 
     def get_absorption_probability(self, wavelength,z):
         # Return the absorption probability for a given wavelength

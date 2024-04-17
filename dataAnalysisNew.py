@@ -5,27 +5,26 @@ import FileHandler as fh
 
 #========================SETUP=======================================================
 
-fileName = "./data/simulation20240415_2.json"
+fileName = ""
 if not fileName:
     fileName = fh.ChooseSingleFile(initdir = "./data")
     print(fileName)
 
-
 plot_exitHistogram = 0
-plot_angleDistribution = 0
-plot_xyPlanePlot = 0
-plot_photonsAbsorbed = 0
+plot_angleDistribution = 1
+plot_xyPlanePlot = 1
+plot_WallHeatMap = 1
 
-savePosDist = 0
-posDistImName = "data/simDistTop.png"
-saveAngDist = 0
-angDistImName = "data/simAngTopSampleInTheMiddle.png"
-saveXY = 0
-xyPlaneImName = "data/simXYBotSampleInTheMiddle.png"
-savePhotonsAbsorbed = 0
-photonsAbsorbed = "data/wallHeatMapSampleInTheMiddle.png"
-saveNumOfWallHits = 0
-numOfWallHitsImName = "data/20240411/wallHitsHist20240411_1.png"
+savefigures = 1
+plt.rcParams['figure.figsize'] = (12, 12)
+datafolder = "data/"
+posfilename = "posHistogram"
+angfilename = "angHistogram"
+xyfilename = "xyPlanePlot"
+heatmapfilename = "wallabsorb"
+wallhitsfilename = "wallhits"
+
+global dotsize
 
 #===========================NOTES==========================================================================
 
@@ -125,7 +124,7 @@ def getExitRadius(data, exit = "top", wavelengths = ["450E-9", "121.567E-9"]):
     # Get photons that exited at the top, separated by wavelength
     Exits = {}
     # Set exit position
-    exitZ = (exit=="top") * data["metadata"]["l_cell"]
+    exitZ = (exit == "top") * data["metadata"]["l_cell"]
 
     # If all wavelengths are wanted, return all exit radii in single array
     if wavelengths == "all":
@@ -180,9 +179,12 @@ def getAngles(data, exit = "top", wavelengths = "all"):
 
     # Calculate the radii of the exit positions
     for wavelength in Exits:
+        #print("WL: ", wavelength)
         Exits[wavelength] = np.array([[Exits[wavelength][key]["position"][0]**2 + Exits[wavelength][key]["position"][1]**2, Exits[wavelength][key]["angle"]] for key in Exits[wavelength]])
-        Exits[wavelength][0] = np.sqrt(Exits[wavelength][0])
-        Exits[wavelength][1] = angleToZ(Exits[wavelength][1])
+        #print(Exits[wavelength])
+        if Exits[wavelength].size > 0:
+            Exits[wavelength][:,0] = np.sqrt(Exits[wavelength][:,0])
+            Exits[wavelength][:,1] = angleToZ(Exits[wavelength][:,1])
     
     return Exits
 
@@ -208,7 +210,7 @@ def getAbsorbZ(data, wavelengths = "all"):
 
 #========================PLOT FUNCTIONS=========================================================================
 
-def posDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure = savePosDist, logscale = False, filename = "./data/DistrHistogram.png"):
+def posDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure = 0, logscale = False, filename = "./data/DistrHistogram.png"):
     """Plots the distribution of photons that exited the sample cell at the top or bottom as a histogram of their exit radii"""
     # Init plot
     fig = plt.figure(1)
@@ -219,8 +221,8 @@ def posDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", sav
     bluer = ExitR[blue]
     uvr = ExitR[uv]
 
-    plt.hist(bluer/CellR, range=(0, 1), bins=40, color='lightskyblue', rwidth=0.75, alpha=0.8, label="Blue")
-    plt.hist(uvr/CellR, range=(0, 1), bins=40, color="darkviolet", rwidth=0.75, alpha=0.4, label="UV")
+    plt.hist(bluer/CellR, range=(0, 1), bins=40, color='cornflowerblue', rwidth=0.75, alpha=0.7, label="Blue")
+    plt.hist(uvr/CellR, range=(0, 1), bins=40, color="mediumorchid", rwidth=0.75, alpha=0.6, label="UV")
     plt.xlabel("$r$ / R")
     plt.ylabel("Number of photons")
     if exit == "top":
@@ -236,20 +238,21 @@ def posDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", sav
         plt.savefig(filename)
     plt.show()
 
-def angleDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure = saveAngDist, filename = "./data/AngleHistogram.png", xlim = 1):
+def angleDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure = 0, filename = "./data/AngleHistogram.png", xlim = 1):
     fig2 = plt.figure(2)
     # Set exit position
     CellR = data["metadata"]["r_cell"]
     angdata = getAngles(data, exit = exit, wavelengths = [blue, uv])
 
     for key in angdata:
-        if key == blue:
-            plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', c="skyblue", label = "Blue")
-        elif key == uv:
-            plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', c="mediumorchid", label = "UV")
-        else:
-            plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=4, marker='.', label = f"{key}")
-    
+        if angdata[key].size > 0:
+            if key == blue:
+                plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=dotsize, marker='.', c="cornflowerblue", label = "Blue")
+            elif key == uv:
+                plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=dotsize, marker='.', c="mediumorchid", label = "UV")
+            else:
+                plt.scatter(angdata[key][:,0]/CellR, angdata[key][:,1], s=dotsize, marker='.', label = f"{key}")
+        
     plt.xlabel("$r$ / R")
     plt.ylabel("Angle / deg")
     plt.xlim(0,xlim)
@@ -262,15 +265,17 @@ def angleDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", s
         plt.savefig(filename)
     plt.show()
 
-def xyPlanePlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure = saveXY, filename = "./data/xyPlanePlot.png"):
+def xyPlanePlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure = 0, filename = "./data/xyPlanePlot.png"):
     fig3, axes = plt.subplots(num=3)
 
     # Set exit position
     CellR = data["metadata"]["r_cell"]
     exitPos = getExitPosition(data, exit = exit, wavelengths = [blue, uv])
 
-    axes.scatter(exitPos[blue][:,0]/CellR, exitPos[blue][:,1]/CellR, marker=".", s=4, color="skyblue", label = "Blue")
-    axes.scatter(exitPos[uv][:,0]/CellR, exitPos[uv][:,1]/CellR, marker=".", s=4, color="mediumorchid", label = "UV")
+    if exitPos[blue].size > 0:
+        axes.scatter(exitPos[blue][:,0]/CellR, exitPos[blue][:,1]/CellR, marker=".", s=dotsize, color="skyblue", label = "Blue")
+    if exitPos[uv].size > 0:
+        axes.scatter(exitPos[uv][:,0]/CellR, exitPos[uv][:,1]/CellR, marker=".", s=dotsize, color="mediumorchid", label = "UV")
     axes.set_xlabel("$x$ / R")
     axes.set_ylabel("$y$ / R")
     if exit == "top":
@@ -289,15 +294,14 @@ def xyPlanePlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure 
         plt.savefig(filename)
     plt.show()
 
-def photonsAbsorbedPlot(data, bins = 100, blue = "450E-9", uv = "121.567E-9", logscale = 1, savefigure = savePhotonsAbsorbed, filename = "./data/HeatMapPlot.png"):
+def wallHeatMapPlot(data, bins = 100, blue = "450E-9", uv = "121.567E-9", logscale = 1, savefigure = 0, filename = "./data/HeatMapPlot.png"):
     fig4 = plt.figure(num=4)
 
     Z_absorption = getAbsorbZ(data, wavelengths = [blue, uv])
-    plt.hist(Z_absorption[blue], bins=bins, color='skyblue', rwidth=0.75, alpha=1, label="Blue")
-    plt.hist(Z_absorption[uv], bins=bins, color="mediumorchid", rwidth=0.75, alpha=0.4, label="UV")
+    plt.hist(Z_absorption[blue], bins=bins, color='cornflowerblue', rwidth=0.75, alpha=0.7, label="Blue")
+    plt.hist(Z_absorption[uv], bins=bins, color="mediumorchid", rwidth=0.75, alpha=0.6, label="UV")
 
     plt.title("Photons absorbed")
-    plt.legend()
     plt.tight_layout()
     if logscale:
         plt.yscale("log")
@@ -310,26 +314,31 @@ def photonsAbsorbedPlot(data, bins = 100, blue = "450E-9", uv = "121.567E-9", lo
 # Bottom of sample cell is assumed to be at z=0
 
 def main(fileName = fileName, plot_exitHistogram = plot_exitHistogram, plot_angleDistribution = plot_angleDistribution, 
-         plot_xyPlanePlot = plot_xyPlanePlot, plot_photonsAbsorbed = plot_photonsAbsorbed):
+         plot_xyPlanePlot = plot_xyPlanePlot, plot_WallHeatMap = plot_WallHeatMap):
     
     # Read data from file
-    data = rawJSONData(fileName=fileName) 
+    data = rawJSONData(fileName=fileName)
+
+    # Set dotsize according to sample size
+    global dotsize 
+    dotsize = 16*(20000/data["metadata"]["simulations"])**0.85 # Exponent is arbitrary, this one just looks good
+    print("Dotsize: ", dotsize)
 
     #=======================PLOTS===================================================================================0
     if plot_exitHistogram:
-        posDistributionPlot(data, exit = "top")
-        posDistributionPlot(data, exit = "bot")
+        posDistributionPlot(data, exit = "top", savefigure=savefigures, filename=datafolder+posfilename+"Top.png")
+        posDistributionPlot(data, exit = "bot", savefigure=savefigures, filename=datafolder+posfilename+"Bot.png")
     
     if plot_angleDistribution:
-        angleDistributionPlot(data, exit = "top")
-        angleDistributionPlot(data, exit = "bot")
+        angleDistributionPlot(data, exit = "top", savefigure=savefigures, filename=datafolder+angfilename+"Top.png")
+        angleDistributionPlot(data, exit = "bot", savefigure=savefigures, filename=datafolder+angfilename+"Bot.png")
     
     if plot_xyPlanePlot:
-        xyPlanePlot(data, exit = "top")
-        xyPlanePlot(data, exit = "bot")
+        xyPlanePlot(data, exit = "top", savefigure=savefigures, filename=datafolder+xyfilename+"Top.png")
+        xyPlanePlot(data, exit = "bot", savefigure=savefigures, filename=datafolder+xyfilename+"Bot.png")
     
-    if plot_photonsAbsorbed:
-        photonsAbsorbedPlot(data)
+    if plot_WallHeatMap:
+        wallHeatMapPlot(data, savefigure=savefigures, filename=datafolder+heatmapfilename+".png")
 
 #========================================================================================================
 

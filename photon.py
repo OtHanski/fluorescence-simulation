@@ -64,10 +64,13 @@ class photon:
     def getDir(self):
         return self.direc
 
-    def simulate(self):
+    def simulate(self, verbose = False):
         """Simulates photon in sampCell.
         Returns (position, direction, num of wall interactions, wavelength, exit/absorp)."""
         try:
+            if verbose:
+                np.set_printoptions(precision=4)
+                print(f"\n\n\n\t\tNEW SIM START\nPhoton {self.id} sim start at {self.pos} with direction {self.direc} magnitude {np.sqrt(np.dot(self.direc,self.direc)):.2f}\n and wavelength {self.wavelength}")
             while True:
                 if self.logold:
                     self.oldevent = self.event
@@ -75,8 +78,13 @@ class photon:
                     self.olddirec = self.direc
 
                 hit = self.sampCell.hit_wall(position=self.pos, direction=self.direc, 
-                                            wavelength=self.wavelength, debug = self.debug)
+                                            wavelength=self.wavelength, verbose = verbose)
                 self.event = hit[3]
+                self.pos = hit[0]
+                self.direc = hit[1]
+                if verbose:
+                    np.set_printoptions(precision=4)
+                    print(f"Photon {self.id} at {self.pos} radius {np.sqrt(self.pos[0]**2+self.pos[1]**2):.2f} with direction {self.direc} magnitude {np.sqrt(np.dot(self.direc,self.direc)):.2f}\n and wavelength {self.wavelength}. Latest event {self.event}.")
                 if hit[3] == "exit":
                     """ Commented out to avoid excessive printouts, add back if problems arise
                     if self.debug: 
@@ -84,25 +92,15 @@ class photon:
                     if ((hit[0] == np.array([0,0,0])).all() or (hit[0] == np.array([0,0,10])).all()): 
                         print(f"Photon exited at {hit[0]} with direction {hit[1]}, \nold event {self.oldevent}, old pos {self.oldpos}, old direc {self.olddirec}")
                     """
-                    self.pos = hit[0]
-                    self.direc = hit[1]
                     return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
                 elif hit[3] == "specular":
-                    self.pos = hit[0]
-                    self.direc = hit[1]
                     self.bounces += 1
                 elif hit[3] == "diffuse":
-                    self.pos = hit[0]
-                    self.direc = hit[1]
                     self.bounces += 1
                 elif hit[3] == "conversion":
-                    self.pos = hit[0]
-                    self.direc = hit[1]
                     self.wavelength = "450E-9"
                     self.bounces += 1
                 elif hit[3] == "absorption":
-                    self.pos = hit[0]
-                    self.direc = hit[1]
                     return hit[0], hit[1], self.bounces, self.wavelength, hit[3]
         except Exception as e:
             print(traceback.format_exc())

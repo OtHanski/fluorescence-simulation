@@ -3,34 +3,45 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from SampleCell import SampleCell
 import FileHandler as fh
+import time
 
 #========================SETUP=======================================================
 
-fileName = "./data/simulation20240415_2.json"
+fileName = "./data/simulation20240417_500k.json"
 if not fileName:
     fileName = fh.ChooseSingleFile(initdir = "./data")
     print(fileName)
 
-top = 1 # Picks photons that exited at sample cell top
+top = 0 # Picks photons that exited at sample cell top
 photonsAbsorbedLogScale = 0
 
+# This
 plot_exitHistogram = 1
-plot_angleDistribution = 1
-plot_xyPlane = 1
-plot_wallHeatMap = 1
+# This still kinda work in progress
+plot_xyPlane = 0
+# Random shit not usable yet
+plot_xyColorMesh = 0
+# This
 plot_photonsAbsorbed = 1
-plot_photonBounces = 1
+# This
 plot_exitAngles = 1
+# Not this
+plot_wallHeatMap = 0
+# This kinda useless
+plot_photonBounces = 0
+# Not this
+plot_angleDistribution = 0
+
 printInfo = 1
 
 saveFigure = 0
-posDistImName = "data/20240411/simDistTop20240411_1.png"
+posDistImName = "data/20240417/rDistribution500kBottom.png"
 angDistImName = "data/20240411/simAngTop20240411_1.png"
 xyPlaneImName = "data/20240411/simXYTop20240411_1.png"
 wallHeatMapImName = "data/20240411/wallHeatMap20240411_1.png"
 numOfWallHitsImName = "data/20240411/wallHitsHist20240411_1.png"
-exitAnglesImName = ""
-photonsAbsorbedImName = ""
+exitAnglesImName = "data/20240417/angleDistribution500kBottom.png"
+photonsAbsorbedImName = "data/20240417/photonsAbsorbed500k.png"
 
 #===========================NOTES==========================================================================
 
@@ -152,7 +163,7 @@ def main():
         botTop = 0.
 
     # For printing stuff
-    info = "\n"
+    info = f"\n-Specs-\nCell length: {sampCellZ} m\nCell radius: {sampCellRadius} m\nWall sections: {data['metadata']["wall_sections"]}\nNumber of simulated photons: {data['metadata']["simulations"]}\nSimulation took {data['metadata']["time"]} s\n"
 
     # Total photons
     totalPhotons = np.size(data["event"])
@@ -265,9 +276,9 @@ def main():
     reachedExit = len(exitPos)
     percentage = 100 * reachedExit / totalPhotons
     if top:
-        info += f"{percentage:.2f} % reached top exit\n"
+        info += f"\n{percentage:.2f} % reached top exit"
     else:
-        info += f"{percentage:.2f} % reached top exit\n"
+        info += f"\n{percentage:.2f} % reached top exit"
 
     # ... of which uv and blue
     uv = []
@@ -310,9 +321,13 @@ def main():
     numberOfAngleUV = np.empty(angleDigBins)
     for i in range(angleDigBins):
         numberOfAngleUV[i] = len(np.where(angleDigUV == i)[0])
+    
+    # Work in progress
+    xyBins = np.empty((200, 200))
 
     #=======================PLOTS===================================================================================0
 
+    # This
     if plot_exitHistogram:
         fig1 = plt.figure(1)
         plt.hist(blue/sampCellRadius, range=(0, 1), bins=40, color='skyblue', rwidth=0.8, alpha=1, label="Blue")
@@ -320,9 +335,9 @@ def main():
         plt.xlabel("$r$ / R")
         plt.ylabel("Number of photons")
         if top:
-            plt.title("Photons exiting sample cell at the top")
+            plt.title("Photon distribution at sample cell top")
         else:
-            plt.title("Photons exiting sample cell at the bottom")
+            plt.title("Photon distribution at sample cell bottom")
         plt.legend()
         #plt.text(0.05, 19.2, f"- {percentage:.1f} % of total photons \n  reached $z$=10\n\n- of which {100*blue/len(exitPos):.1f} % blue")
         plt.tight_layout()
@@ -330,6 +345,7 @@ def main():
             plt.savefig(posDistImName)
         plt.show()
 
+    # Not this
     if plot_angleDistribution:
         fig2 = plt.figure(2)
         plt.scatter(blue/sampCellRadius, exitAngleBlue, s=4, marker='.', c="skyblue")
@@ -345,36 +361,54 @@ def main():
             plt.savefig(angDistImName)
         plt.show()
 
+    # This still kinda work in progress
     if plot_xyPlane:
-        # To be continued
-        ymesh, xmesh = np.meshgrid(np.linspace(-1, 1, 100), np.linspace(-1, 1, 100))
-        fig3, axes = plt.subplots(num=3)
-        axes.scatter(exitXBlue/sampCellRadius, exitYBlue/sampCellRadius, marker=".", s=4, color="skyblue")
-        axes.scatter(exitXUV/sampCellRadius, exitYUV/sampCellRadius, marker=".", s=4, color="mediumorchid")
-        axes.set_xlabel("$x$ / R")
-        axes.set_ylabel("$y$ / R")
+        fig3, (ax1, ax2) = plt.subplots(1, 2, layout="constrained", num=3)
+        ax2.scatter(exitXBlue/sampCellRadius, exitYBlue/sampCellRadius, marker=".", s=1, color="skyblue")
+        ax1.scatter(exitXUV/sampCellRadius, exitYUV/sampCellRadius, marker=".", s=1, color="mediumorchid")
+        ax1.set_xlabel("$x$ / R")
+        ax1.set_ylabel("$y$ / R")
+        ax2.set_xlabel("$x$ / R")
+        ax2.set_ylabel("$y$ / R")
+        ax1.set_title("UV")
+        ax2.set_title("Blue")
         if top:
-            plt.title("Top")
+            fig3.suptitle("Top")
         else:
-            plt.title("Bottom")
-        circle = Circle(xy=(0, 0), radius=1, ec="black", figure=fig3, fill=False, ls="-", visible=True, lw=2, label="$r$=R")
-        axes.set_aspect(1)
-        axes.add_artist(circle)
-        axes.set_xlim(-2, 2)
-        axes.set_ylim(-2, 2)
-        plt.legend()
+            fig3.suptitle("Bottom")
+        circle1 = Circle(xy=(0, 0), radius=1, ec="black", figure=fig3, fill=False, ls="-", visible=True, lw=2, label="$r$=R")
+        circle2 = Circle(xy=(0, 0), radius=1, ec="black", figure=fig3, fill=False, ls="-", visible=True, lw=2, label="$r$=R")
+        ax1.set_aspect(1)
+        ax2.set_aspect(1)
+        ax1.add_artist(circle1)
+        ax2.add_artist(circle2)
+        ax1.set_xlim(-1.5, 1.5)
+        ax2.set_xlim(-1.5, 1.5)
+        ax1.set_ylim(-1.5, 1.5)
+        ax2.set_ylim(-1.5, 1.5)
+        #ax1.legend()
+        #ax2.legend()
         #axes.pcolormesh(xmesh, ymesh, (x, y))
         plt.tight_layout()
         if saveFigure:
             plt.savefig(xyPlaneImName)
         plt.show()
 
+    # Random shit I wanna test
+    if plot_xyColorMesh:
+        fig8, ax = plt.subplots(num=8)
+        z = [[exitXBlue[i], exitYBlue[i]] for i in range(len(exitYBlue))]
+        ymesh, xmesh = np.meshgrid(np.linspace(-1, 1, len(exitXBlue)+1), np.linspace(-1, 1, len(exitYBlue)+1))
+        ax.imshow(z, cmap="inferno", aspect="equal")
+        plt.show()
+
+    # Not this
     if plot_wallHeatMap:
         fig4, axes = plt.subplots(num=4)
         hm = axes.imshow(absZperBin[:,np.newaxis], cmap='jet', aspect=0.03, origin='lower')
         fig4.colorbar(hm)
         axes.set_xticks([])
-        axes.set_yticks([-0.5, 100.5], ['Bot', 'Top'])
+        axes.set_yticks([-0.5, 100.5], ['Bottom', 'Top'])
         fig4.suptitle("Photons absorbed")
         fig4.set_figwidth(2.6)
         plt.tight_layout()
@@ -382,11 +416,12 @@ def main():
             plt.savefig(wallHeatMapImName)
         plt.show()
 
+    # This kinda useless
     if plot_photonBounces:
         # To be continued
         fig5 = plt.figure(5)
-        plt.hist(absHits, bins=185, range=(0, 375), color='skyblue', rwidth=1, alpha=1, label="Absorbed")
-        plt.hist(exitHits, bins=185, range=(0, 375), color='purple', rwidth=1, alpha=0.5, label="Exited")
+        plt.hist(absHits, bins=185, range=(0, 375), color='lightsteelblue', rwidth=1, alpha=1, label="Absorbed")
+        plt.hist(exitHits, bins=185, range=(0, 375), color='darkslategrey', rwidth=1, alpha=0.5, label="Exited")
         plt.yscale("log")
         plt.xlabel("Number of wall hits")
         plt.ylabel("Number of photons")
@@ -396,22 +431,30 @@ def main():
             plt.savefig(numOfWallHitsImName)
         plt.show()
 
+    # This
     if plot_exitAngles:
         fig7 = plt.figure(7)
         plt.plot(np.linspace(0, 90, angleDigBins), numberOfAngleBlue, color="skyblue", label="Blue")
         plt.plot(np.linspace(0, 90, angleDigBins), numberOfAngleUV, color="mediumorchid", label="UV")
         plt.xlabel("Angle / deg")
         plt.ylabel("Number of photons")
+        if top:
+            plt.title("Top")
+        else:
+            plt.title("Bottom")
         plt.legend()
         plt.tight_layout()
+        if saveFigure:
+            plt.savefig(exitAnglesImName)
         plt.show()
 
+    # This
     if plot_photonsAbsorbed:
         fig4 = plt.figure(num=4)
         plt.hist(absZBlue/sampCellZ, bins=50, color='skyblue', rwidth=0.8, alpha=1, label="Blue")
         plt.hist(absZUV/sampCellZ, bins=50, color="purple", rwidth=0.8, alpha=0.5, label="UV")
         plt.title("Photons absorbed")
-        plt.xlabel("$z$ / h$_{\mathrm{cell}}$")
+        plt.xlabel("$z$ / h$_{\\mathrm{cell}}$")
         plt.ylabel("Number of photons")
         plt.legend()
         plt.tight_layout()
@@ -427,4 +470,7 @@ def main():
 #========================================================================================================
 
 if __name__ == "__main__":
+    before = time.time()
     main()
+    after = time.time()
+    print(f"This shit took {after-before} seconds")
