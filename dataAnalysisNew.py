@@ -15,13 +15,14 @@ plot_angleDistribution = 1
 plot_xyPlanePlot = 1
 plot_WallHeatMap = 1
 
-
+savefigures = 1
 plt.rcParams['figure.figsize'] = (12, 12)
-posDistImName = "data/simDistTop.png"
-angDistImName = "data/simAngTopSampleInTheMiddle.png"
-xyPlaneImName = "data/simXYBotSampleInTheMiddle.png"
-wallHeatMapImName = "data/wallHeatMapSampleInTheMiddle.png"
-numOfWallHitsImName = "data/20240411/wallHitsHist20240411_1.png"
+datafolder = "data/"
+posfilename = "posHistogram"
+angfilename = "angHistogram"
+xyfilename = "xyPlanePlot"
+heatmapfilename = "wallabsorb"
+wallhitsfilename = "wallhits"
 
 global dotsize
 
@@ -325,19 +326,19 @@ def main(fileName = fileName, plot_exitHistogram = plot_exitHistogram, plot_angl
 
     #=======================PLOTS===================================================================================0
     if plot_exitHistogram:
-        posDistributionPlot(data, exit = "top")
-        posDistributionPlot(data, exit = "bot")
+        posDistributionPlot(data, exit = "top", savefigure=savefigures, filename=datafolder+posfilename+"Top.png")
+        posDistributionPlot(data, exit = "bot", savefigure=savefigures, filename=datafolder+posfilename+"Bot.png")
     
     if plot_angleDistribution:
-        angleDistributionPlot(data, exit = "top")
-        angleDistributionPlot(data, exit = "bot")
+        angleDistributionPlot(data, exit = "top", savefigure=savefigures, filename=datafolder+angfilename+"Top.png")
+        angleDistributionPlot(data, exit = "bot", savefigure=savefigures, filename=datafolder+angfilename+"Bot.png")
     
     if plot_xyPlanePlot:
-        xyPlanePlot(data, exit = "top")
-        xyPlanePlot(data, exit = "bot")
+        xyPlanePlot(data, exit = "top", savefigure=savefigures, filename=datafolder+xyfilename+"Top.png")
+        xyPlanePlot(data, exit = "bot", savefigure=savefigures, filename=datafolder+xyfilename+"Bot.png")
     
     if plot_WallHeatMap:
-        wallHeatMapPlot(data)
+        wallHeatMapPlot(data, savefigure=savefigures, filename=datafolder+heatmapfilename+".png")
 
 #========================================================================================================
 
