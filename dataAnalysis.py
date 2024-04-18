@@ -37,7 +37,7 @@ plot_sensorShit = 1
 
 printInfo = 1
 
-saveFigure = 0
+saveFigure = 1
 posDistImName = "data/20240417/rDistribution500kBottom.png"
 angDistImName = "data/20240417/angleDistribution500kBottom.png"
 xyPlaneImName = "data/20240411/simXYTop20240411_1.png"
@@ -45,6 +45,7 @@ wallHeatMapImName = "data/20240411/wallHeatMap20240411_1.png"
 numOfWallHitsImName = "data/20240411/wallHitsHist20240411_1.png"
 exitAnglesImName = "data/20240417/angleDistribution500kBottom.png"
 photonsAbsorbedImName = "data/20240417/photonsAbsorbed500k.png"
+sensorShitImName = "data/20240418/sensor500k.png"
 
 #===========================NOTES==========================================================================
 
@@ -192,20 +193,20 @@ def getShitForSensor(data: dict, sensorX: float = 1, sensorY: float = 1, centere
         return np.array([xAtBottomBlue, yAtBottomBlue]), np.array([xAtBottomUV, yAtBottomUV]), numberOfPhotons
 
 # SENSOR SHIT
-def sensorShitPlot(data: dict, sensorX: float = 1, sensorY: float = 1, centeredAt: np.ndarray = np.array([0, 0]), top=0):
+def sensorShitPlot(data: dict, save=0, sensorX: float = 1, sensorY: float = 1, centeredAt: np.ndarray = np.array([0, 0]), top=0):
     
     sensorShitXY = getShitForSensor(data=data, sensorX=sensorX, sensorY=sensorY, centeredAt=centeredAt, top=top)
     # Print number of photons hitting sensor
     print(f"{len(sensorShitXY[0][0])} blue photons hit the sensor, {len(sensorShitXY[0][0])/sensorShitXY[2]*100} % of total photons\n{len(sensorShitXY[1][0])} uv photons hit the sensor, {len(sensorShitXY[1][0])/sensorShitXY[2]*100} % of total photons")
     
-    fig9, ax = plt.subplots(num=9)
-    ax.scatter(sensorShitXY[0][0]/data["metadata"]["r_cell"], sensorShitXY[0][1]/data["metadata"]["r_cell"], marker=".", s=1, color="skyblue")
+    fig, ax = plt.subplots(num=9)
+    ax.scatter(sensorShitXY[0][0]/data["metadata"]["r_cell"], sensorShitXY[0][1]/data["metadata"]["r_cell"], marker=".", s=0.5, color="skyblue")
+    ax.scatter(sensorShitXY[1][0]/data["metadata"]["r_cell"], sensorShitXY[1][1]/data["metadata"]["r_cell"], marker=".", s=0.5, color="mediumorchid")
     # Cell wall
-    ax.scatter(sensorShitXY[1][0]/data["metadata"]["r_cell"], sensorShitXY[1][1]/data["metadata"]["r_cell"], marker=".", s=1, color="mediumorchid")
-    circle = Circle(xy=(0, 0), radius=1, ec="black", figure=fig9, fill=False, ls="-", visible=True, lw=2, label="Cell wall")
+    circle = Circle(xy=(0, 0), radius=1, ec="black", figure=fig, fill=False, ls="-", visible=True, lw=2, label="Cell wall")
     ax.add_artist(circle)
     # Sensor outline
-    rectum = Rectangle(xy=((centeredAt[0]-sensorX/2)/data["metadata"]["r_cell"], (centeredAt[1]-sensorY/2)/data["metadata"]["r_cell"]), width=sensorX/data["metadata"]["r_cell"], height=sensorY/data["metadata"]["r_cell"], figure=fig9, ec="black", fill=False, ls="--", visible=True, lw=1.5, label="Sensor")
+    rectum = Rectangle(xy=((centeredAt[0]-sensorX/2)/data["metadata"]["r_cell"], (centeredAt[1]-sensorY/2)/data["metadata"]["r_cell"]), width=sensorX/data["metadata"]["r_cell"], height=sensorY/data["metadata"]["r_cell"], figure=fig, ec="black", fill=False, ls="--", visible=True, lw=1.5, label="Sensor")
     ax.add_artist(rectum)
     ax.set_xlim(-1.1, 1.1)
     ax.set_ylim(-1.1, 1.1)
@@ -217,6 +218,8 @@ def sensorShitPlot(data: dict, sensorX: float = 1, sensorY: float = 1, centeredA
         ax.set_title("Sensor at top exit")
     else:
         ax.set_title("Sensor at bottom exit")
+    if save:
+        plt.savefig(sensorShitImName)
     plt.show()
 
 #=======================CALCULATIONS============================================================================
@@ -541,7 +544,7 @@ def main():
         plt.show()
     
     if plot_sensorShit:
-        sensorShitPlot(data=data, sensorX=0.003, sensorY=0.003, centeredAt=np.array([0.003, 0.]))
+        sensorShitPlot(data=data, save=saveFigure, sensorX=0.003, sensorY=0.003, centeredAt=np.array([0.003, 0.]))
 
     if printInfo:
         print(info)
