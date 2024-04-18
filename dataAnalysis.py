@@ -146,7 +146,7 @@ def angleToZ(radangles: np.ndarray):
     # Black magic to convert 0=>180 to 0 => 90 => 0
     return radangles[:] * (180/np.pi)*(1-2*over_pi2) + 180*over_pi2
 
-# Sensor shit
+# SENSOR SHIT
 def getShitForSensor(data: dict, sensorX: float = 1, sensorY: float = 1, centeredAt: np.ndarray = np.array([0, 0]), top=0):
     
     numberOfPhotons = np.size(data["event"])
@@ -190,7 +190,8 @@ def getShitForSensor(data: dict, sensorX: float = 1, sensorY: float = 1, centere
         xAtBottomUV = np.take(posAtBottomUV, 0, axis=1)
         yAtBottomUV = np.take(posAtBottomUV, 1, axis=1)
         return np.array([xAtBottomBlue, yAtBottomBlue]), np.array([xAtBottomUV, yAtBottomUV]), numberOfPhotons
-    
+
+# SENSOR SHIT
 def sensorShitPlot(data: dict, sensorX: float = 1, sensorY: float = 1, centeredAt: np.ndarray = np.array([0, 0]), top=0):
     
     sensorShitXY = getShitForSensor(data=data, sensorX=sensorX, sensorY=sensorY, centeredAt=centeredAt, top=top)
