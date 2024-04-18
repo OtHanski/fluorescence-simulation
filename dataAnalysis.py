@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
+from matplotlib.patches import Rectangle
 from SampleCell import SampleCell
 import FileHandler as fh
 import time
@@ -16,27 +17,29 @@ top = 0 # Picks photons that exited at sample cell top
 photonsAbsorbedLogScale = 0
 
 # This
-plot_exitHistogram = 1
+plot_exitHistogram = 0
 # This still kinda work in progress
 plot_xyPlane = 0
 # Random shit not usable yet
 plot_xyColorMesh = 0
 # This
-plot_photonsAbsorbed = 1
+plot_photonsAbsorbed = 0
 # This
-plot_exitAngles = 1
+plot_exitAngles = 0
 # Not this
 plot_wallHeatMap = 0
 # This kinda useless
 plot_photonBounces = 0
-# Not this
+# This
 plot_angleDistribution = 0
+# SENSOR SHIT
+plot_sensorShit = 1
 
 printInfo = 1
 
 saveFigure = 0
 posDistImName = "data/20240417/rDistribution500kBottom.png"
-angDistImName = "data/20240411/simAngTop20240411_1.png"
+angDistImName = "data/20240417/angleDistribution500kBottom.png"
 xyPlaneImName = "data/20240411/simXYTop20240411_1.png"
 wallHeatMapImName = "data/20240411/wallHeatMap20240411_1.png"
 numOfWallHitsImName = "data/20240411/wallHitsHist20240411_1.png"
@@ -142,6 +145,78 @@ def angleToZ(radangles: np.ndarray):
     over_pi2 = radangles[:] > np.pi/2
     # Black magic to convert 0=>180 to 0 => 90 => 0
     return radangles[:] * (180/np.pi)*(1-2*over_pi2) + 180*over_pi2
+
+# Sensor shit
+def getShitForSensor(data: dict, sensorX: float = 1, sensorY: float = 1, centeredAt: np.ndarray = np.array([0, 0]), top=0):
+    
+    numberOfPhotons = np.size(data["event"])
+    cellHeight = data["metadata"]["l_cell"]
+    sensorXLim = np.array([(centeredAt[0]-sensorX/2), (centeredAt[0]+sensorX/2)])
+    sensorYLim = np.array([(centeredAt[1]-sensorY/2), (centeredAt[1]+sensorY/2)])
+
+    if top:
+        # Get positions of photons at top within sensor (sensor limits are inclusive)
+        posAtTopUV = []
+        posAtTopBlue = []
+        for i in range(numberOfPhotons):
+            if data["event"][i].strip() == "exit" and data["pos"][i][2] == cellHeight and sensorXLim[0] <= data["pos"][i][0] <= sensorXLim[1] and sensorYLim[0] <= data["pos"][i][1] <= sensorYLim[1]:
+                if data["wavelength"][i].strip() == "450E-9":
+                    posAtTopBlue.append(data["pos"][i])
+                else:
+                    posAtTopUV.append(data["pos"][i])
+        posAtTopBlue = np.array(posAtTopBlue)
+        posAtTopUV = np.array(posAtTopUV)
+        # x and y
+        xAtTopBlue = np.take(posAtTopBlue, 0, axis=1)
+        yAtTopBlue = np.take(posAtTopBlue, 1, axis=1)
+        xAtTopUV = np.take(posAtTopUV, 0, axis=1)
+        yAtTopUV = np.take(posAtTopUV, 1, axis=1)
+        return np.array([xAtTopBlue, yAtTopBlue]), np.array([xAtTopUV, yAtTopUV]), numberOfPhotons
+    else:
+        # Get positions of photons at bottom (which is assumed to be z=0)
+        posAtBottomUV = []
+        posAtBottomBlue = []
+        for i in range(numberOfPhotons):
+            if data["event"][i].strip() == "exit" and data["pos"][i][2] == 0. and sensorXLim[0] <= data["pos"][i][0] <= sensorXLim[1] and sensorYLim[0] <= data["pos"][i][1] <= sensorYLim[1]:
+                if data["wavelength"][i].strip() == "450E-9":
+                    posAtBottomBlue.append(data["pos"][i])
+                else:
+                    posAtBottomUV.append(data["pos"][i])
+        posAtBottomBlue = np.array(posAtBottomBlue)
+        posAtBottomUV = np.array(posAtBottomUV)
+        # x and y
+        xAtBottomBlue = np.take(posAtBottomBlue, 0, axis=1)
+        yAtBottomBlue = np.take(posAtBottomBlue, 1, axis=1)
+        xAtBottomUV = np.take(posAtBottomUV, 0, axis=1)
+        yAtBottomUV = np.take(posAtBottomUV, 1, axis=1)
+        return np.array([xAtBottomBlue, yAtBottomBlue]), np.array([xAtBottomUV, yAtBottomUV]), numberOfPhotons
+    
+def sensorShitPlot(data: dict, sensorX: float = 1, sensorY: float = 1, centeredAt: np.ndarray = np.array([0, 0]), top=0):
+    
+    sensorShitXY = getShitForSensor(data=data, sensorX=sensorX, sensorY=sensorY, centeredAt=centeredAt, top=top)
+    # Print number of photons hitting sensor
+    print(f"{len(sensorShitXY[0][0])} blue photons hit the sensor, {len(sensorShitXY[0][0])/sensorShitXY[2]*100} % of total photons\n{len(sensorShitXY[1][0])} uv photons hit the sensor, {len(sensorShitXY[1][0])/sensorShitXY[2]*100} % of total photons")
+    
+    fig9, ax = plt.subplots(num=9)
+    ax.scatter(sensorShitXY[0][0]/data["metadata"]["r_cell"], sensorShitXY[0][1]/data["metadata"]["r_cell"], marker=".", s=1, color="skyblue")
+    # Cell wall
+    ax.scatter(sensorShitXY[1][0]/data["metadata"]["r_cell"], sensorShitXY[1][1]/data["metadata"]["r_cell"], marker=".", s=1, color="mediumorchid")
+    circle = Circle(xy=(0, 0), radius=1, ec="black", figure=fig9, fill=False, ls="-", visible=True, lw=2, label="Cell wall")
+    ax.add_artist(circle)
+    # Sensor outline
+    rectum = Rectangle(xy=((centeredAt[0]-sensorX/2)/data["metadata"]["r_cell"], (centeredAt[1]-sensorY/2)/data["metadata"]["r_cell"]), width=sensorX/data["metadata"]["r_cell"], height=sensorY/data["metadata"]["r_cell"], figure=fig9, ec="black", fill=False, ls="--", visible=True, lw=1.5, label="Sensor")
+    ax.add_artist(rectum)
+    ax.set_xlim(-1.1, 1.1)
+    ax.set_ylim(-1.1, 1.1)
+    ax.set_aspect(1)
+    ax.set_xlabel("$x$ / R")
+    ax.set_ylabel("$y$ / R")
+    #ax.legend()
+    if top:
+        ax.set_title("Sensor at top exit")
+    else:
+        ax.set_title("Sensor at bottom exit")
+    plt.show()
 
 #=======================CALCULATIONS============================================================================
 
@@ -348,8 +423,8 @@ def main():
     # Not this
     if plot_angleDistribution:
         fig2 = plt.figure(2)
-        plt.scatter(blue/sampCellRadius, exitAngleBlue, s=4, marker='.', c="skyblue")
-        plt.scatter(uv/sampCellRadius, exitAngleUV, s=4, marker='.', c="mediumorchid")
+        plt.scatter(blue/sampCellRadius, exitAngleBlue, s=0.75, marker='.', c="skyblue")
+        plt.scatter(uv/sampCellRadius, exitAngleUV, s=0.75, marker='.', c="mediumorchid")
         plt.xlabel("$r$ / R")
         plt.ylabel("Angle / deg")
         if top:
@@ -434,8 +509,8 @@ def main():
     # This
     if plot_exitAngles:
         fig7 = plt.figure(7)
-        plt.plot(np.linspace(0, 90, angleDigBins), numberOfAngleBlue, color="skyblue", label="Blue")
-        plt.plot(np.linspace(0, 90, angleDigBins), numberOfAngleUV, color="mediumorchid", label="UV")
+        plt.plot(np.linspace(0, 90, angleDigBins), numberOfAngleBlue, color="skyblue", label="Blue", lw=1.5)
+        plt.plot(np.linspace(0, 90, angleDigBins), numberOfAngleUV, color="mediumorchid", label="UV", lw=1.5)
         plt.xlabel("Angle / deg")
         plt.ylabel("Number of photons")
         if top:
@@ -463,6 +538,9 @@ def main():
         if saveFigure:
             plt.savefig(photonsAbsorbedImName)
         plt.show()
+    
+    if plot_sensorShit:
+        sensorShitPlot(data=data, sensorX=0.003, sensorY=0.003, centeredAt=np.array([0.003, 0.]))
 
     if printInfo:
         print(info)
@@ -470,7 +548,4 @@ def main():
 #========================================================================================================
 
 if __name__ == "__main__":
-    before = time.time()
     main()
-    after = time.time()
-    print(f"This shit took {after-before} seconds")
