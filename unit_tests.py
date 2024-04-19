@@ -17,6 +17,8 @@ import numpy as np
 import random as rng
 import time
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.widgets import Slider
 
 # Import the classes to be tested
 from SampleCell import SampleCell
@@ -27,7 +29,8 @@ import simulation
 test_cell = 0
 test_gas = 0
 test_sim = 0
-test_hits = 1
+test_hits = 0
+test_randvec = 1
 
 # Sample cell test settings
 timetest = 1
@@ -158,6 +161,49 @@ def test_Gas_Generation():
     plt.show()
 
 
+def test_randomvec():
+    # Generate a sample cell with straight cylindrical walls (r = 1, z = 10)
+    samples = 1000
+    z = np.linspace(0,10,samples)
+    r = np.ones(samples)
+    cell = SampleCell(z, r, samples = samples)
+
+    # Generate 1000 sample unit vectors
+    samples = 10000
+    data = np.zeros((samples, 3))
+    for i in range(samples):
+        data[i] = cell.randomvec()
+
+    # Create a 3D plot
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Plot the points on the unit sphere
+    scatter = ax.scatter(data[:, 0], data[:, 1], data[:, 2], s = 0.1)
+
+    # Set the aspect ratio and labels
+    ax.set_box_aspect([1,1,1])
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    # Add sliders for rotation
+    axcolor = 'lightgoldenrodyellow'
+    ax_rot_xy = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
+    ax_rot_yz = plt.axes([0.25, 0.15, 0.65, 0.03], facecolor=axcolor)
+
+    s_rot_xy = Slider(ax_rot_xy, 'XY Rotation', 0, 360, valinit=0)
+    s_rot_yz = Slider(ax_rot_yz, 'YZ Rotation', 0, 360, valinit=0)
+
+    def update(val):
+        ax.view_init(s_rot_yz.val, s_rot_xy.val)
+        fig.canvas.draw_idle()
+
+    s_rot_xy.on_changed(update)
+    s_rot_yz.on_changed(update)
+
+    plt.show()
+
 
 if __name__ == "__main__":
     if test_cell:
@@ -168,3 +214,5 @@ if __name__ == "__main__":
         test_simulation()
     if test_hits:
         test_hit_wall()
+    if test_randvec:
+        test_randomvec()
