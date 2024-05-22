@@ -10,7 +10,7 @@ if not fileName:
     fileName = fh.ChooseSingleFile(initdir = "./data")
     print(fileName)
 
-plot_exitHistogram = 0
+plot_exitHistogram = 1
 plot_angleDistribution = 1
 plot_xyPlanePlot = 1
 plot_WallHeatMap = 1

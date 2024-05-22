@@ -32,8 +32,10 @@ r_cell = 5E-3 # Radius of the cell [m]
 l_cell = 120E-3 # Length of the cell [m]
 # Gas cloud parameters:
 gas_height = 10E-3 # Height of the gas cloud [m]
-gas_offset = 5E-3 # Offset of the gas cloud from the cell bottom [m]
+gas_offset = 105E-3 # Offset of the gas cloud from the cell bottom [m]
 gas_radius = 1.5E-3 # Radius of the gas cloud [m]
+
+custom = 1
 ### End of simulation settings ###
 
 def randomGasPoint(gas_height = gas_height, gas_offset = gas_offset, gas_radius = gas_radius):
@@ -126,6 +128,22 @@ def main(simulations = simulations, wall_sections = wall_sections, r_cell = r_ce
     diffrefl = {"121.567E-9": np.zeros(wall_sections-1), "450E-9": np.zeros(wall_sections-1)}
     absprob = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.02}
     WLconversion = {"121.567E-9": np.zeros(wall_sections-1)+0.5, "450E-9": np.zeros(wall_sections-1)}
+
+    if custom:
+        arrlen = len(specrefl["121.567E-9"])
+        for i in range(arrlen):
+            WLconv = 0.5*(i/arrlen)
+            blueabs = 0.02
+            uvabs = 0.25
+            specrefl["121.567E-9"][i] = (1-i/arrlen)*(1-WLconv-uvabs)
+            specrefl["450E-9"][i] = (1-i/arrlen)*(1-blueabs)
+            diffrefl["121.567E-9"][i] = (i/arrlen)*(1-WLconv-uvabs)
+            diffrefl["450E-9"][i] = (i/arrlen)*(1-blueabs)
+            absprob["121.567E-9"][i] = uvabs
+            absprob["450E-9"][i] = blueabs
+            WLconversion["121.567E-9"][i] = WLconv
+            WLconversion["450E-9"][i] = 0
+
 
     cell = SampleCell(z, r, specrefl=specrefl, diffrefl=diffrefl, absprob=absprob, 
                       WLconversion=WLconversion, samples=wall_sections, wavelengths=wavelengths)

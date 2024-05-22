@@ -1,0 +1,36 @@
+lin bot to top:
+
+            WLconv = 0.5*(i/arrlen)
+            blueabs = 0.02
+            uvabs = 0.25
+            specrefl["121.567E-9"][i] = (1-i/arrlen)*(1-WLconv-uvabs)
+            specrefl["450E-9"][i] = (1-i/arrlen)*(1-blueabs)
+            diffrefl["121.567E-9"][i] = (i/arrlen)*(1-WLconv-uvabs)
+            diffrefl["450E-9"][i] = (i/arrlen)*(1-blueabs)
+            absprob["121.567E-9"][i] = uvabs
+            absprob["450E-9"][i] = blueabs
+            WLconversion["121.567E-9"][i] = WLconv
+            WLconversion["450E-9"][i] = 0
+
+
+1/3 no coat, top full coat
+
+WLconv = 0.5
+blueabs = 0.02
+uvabs = 0.25
+specrefl["121.567E-9"][i] = (i<arrlen/3)*(0.5)
+specrefl["450E-9"][i] = (i<arrlen/3)*(1-blueabs)
+diffrefl["121.567E-9"][i] = (!(i<arrlen/3))*(1-WLconv-uvabs)
+diffrefl["450E-9"][i] = (!(i<arrlen/3))*(1-blueabs)
+absprob["121.567E-9"][i] = uvabs+(i<arrlen/3)*0.25
+absprob["450E-9"][i] = blueabs
+WLconversion["121.567E-9"][i] = WLconv*(i>arrlen/3)
+WLconversion["450E-9"][i] = 0
+
+
+Full diffusive
+
+specrefl = {"121.567E-9": np.zeros(wall_sections-1), "450E-9": np.zeros(wall_sections-1)}
+diffrefl = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.98}
+absprob = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.02}
+WLconversion = {"121.567E-9": np.zeros(wall_sections-1)+0.5, "450E-9": np.zeros(wall_sections-1)}
