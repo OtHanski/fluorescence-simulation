@@ -15,6 +15,10 @@ plot_angleDistribution = 1
 plot_xyPlanePlot = 1
 plot_WallHeatMap = 1
 
+# Plot settings
+lgscl = 1 # Logscale for histograms
+densityplot = 1 # Change exithistogram to density plot
+
 savefigures = 1
 plt.rcParams['figure.figsize'] = (12, 12)
 datafolder = "data/"
@@ -210,21 +214,29 @@ def getAbsorbZ(data, wavelengths = "all"):
 
 #========================PLOT FUNCTIONS=========================================================================
 
-def posDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure = 0, logscale = False, filename = "./data/DistrHistogram.png"):
+def posDistributionPlot(data, exit = "", blue = "450E-9", uv = "121.567E-9", savefigure = 0, logscale = True, filename = "./data/DistrHistogram.png"):
     """Plots the distribution of photons that exited the sample cell at the top or bottom as a histogram of their exit radii"""
     # Init plot
     fig = plt.figure(1)
     # Set exit position
     CellR = data["metadata"]["r_cell"]
+    # Number of bins
+    binN = 40
 
     ExitR = getExitRadius(data, exit = exit, wavelengths = [blue, uv])
     bluer = ExitR[blue]
     uvr = ExitR[uv]
+    weightsblue = np.zeros(len(bluer))+1
+    weightsuv = np.zeros(len(uvr))+1
+    # If calculating density, normalise by 2*pi*r
+    if densityplot:
+        weightsblue = 1/(2*np.pi*bluer)
+        weightsuv = 1/(2*np.pi*uvr)
 
-    plt.hist(bluer/CellR, range=(0, 1), bins=40, color='cornflowerblue', rwidth=0.75, alpha=0.7, label="Blue")
-    plt.hist(uvr/CellR, range=(0, 1), bins=40, color="mediumorchid", rwidth=0.75, alpha=0.6, label="UV")
+    plt.hist(bluer/CellR, range=(0, 1), bins=binN, weights = weightsblue, color='cornflowerblue', rwidth=0.75, alpha=0.7, label="Blue")
+    plt.hist(uvr/CellR, range=(0, 1), bins=binN, weights = weightsuv, color="mediumorchid", rwidth=0.75, alpha=0.6, label="UV")
     plt.xlabel("$r$ / R")
-    plt.ylabel("Number of photons")
+    plt.ylabel(f"Number of photons{' per unit area' if densityplot else ''}")
     if exit == "top":
         plt.title("Photons exiting sample cell at the top")
     else:
@@ -326,8 +338,8 @@ def main(fileName = fileName, plot_exitHistogram = plot_exitHistogram, plot_angl
 
     #=======================PLOTS===================================================================================0
     if plot_exitHistogram:
-        posDistributionPlot(data, exit = "top", savefigure=savefigures, filename=datafolder+posfilename+"Top.png")
-        posDistributionPlot(data, exit = "bot", savefigure=savefigures, filename=datafolder+posfilename+"Bot.png")
+        posDistributionPlot(data, exit = "top", savefigure=savefigures, filename=datafolder+posfilename+"Top.png", logscale = lgscl)
+        posDistributionPlot(data, exit = "bot", savefigure=savefigures, filename=datafolder+posfilename+"Bot.png", logscale = lgscl)
     
     if plot_angleDistribution:
         angleDistributionPlot(data, exit = "top", savefigure=savefigures, filename=datafolder+angfilename+"Top.png")

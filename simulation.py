@@ -23,19 +23,26 @@ import FileHandler as fh
 filename = "simulation"
 output = "json" # "dat" or "json"
 # Number of particles to simulate
-simulations = 500000
+simulations = 1000000
 # Number of wall sections to divide the cell into (1 to n)
 wall_sections = 150
 # Cell parameters:
 shape = "cylinder"
-r_cell = 5E-3 # Radius of the cell [m]
-l_cell = 120E-3 # Length of the cell [m]
+r_cell = 8E-3 # Radius of the cell [m]
+l_cell = 200E-3 # Length of the cell [m]
 # Gas cloud parameters:
+<<<<<<< HEAD
 gas_height = 10E-3 # Height of the gas cloud [m]
 gas_offset = 105E-3 # Offset of the gas cloud from the cell bottom [m]
 gas_radius = 1.5E-3 # Radius of the gas cloud [m]
 
 custom = 1
+=======
+gas_height = 5E-2 # Height of the gas cloud [m]
+gas_offset = (l_cell-gas_height)/2 # Offset of the gas cloud from the cell bottom [m]
+#gas_height = 0E-2 # override
+gas_radius = 1E-3 # Radius of the gas cloud [m]
+>>>>>>> 8beecb0c5eec1e76f98bfd9f125839b7d4b9f39d
 ### End of simulation settings ###
 
 def randomGasPoint(gas_height = gas_height, gas_offset = gas_offset, gas_radius = gas_radius):
@@ -101,7 +108,7 @@ def simulate_json(sampCell = None, filename = filename, simulations = simulation
     for i in range(simulations):
         # Generate a random point in the gas cloud
         if (i+1) % min(int(simulations/10), 25000) == 0:
-            print(f"\nSimulating photon {i+1}/{simulations}, time elapsed: {time.time()-starttime:.2f}s\n")
+            print(f"\n{time.strftime('%H:%M',time.localtime())}\tSimulating photon {i+1}/{simulations}, time elapsed: {time.time()-starttime:.2f}s\n")
         pos = randomGasPoint()
         # , direction=np.array([0.02,0,1])
         phot = photon(sampCell=sampCell, position=pos, id = i+1)
@@ -124,9 +131,9 @@ def main(simulations = simulations, wall_sections = wall_sections, r_cell = r_ce
     wavelengths = np.array(["121.567E-9", "450E-9"])
 
     # Create the parameter dictionaries for the SampleCell
-    specrefl = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.98}
+    specrefl = {"121.567E-9": np.zeros(wall_sections-1)+0.10, "450E-9": np.zeros(wall_sections-1)+0.98}
     diffrefl = {"121.567E-9": np.zeros(wall_sections-1), "450E-9": np.zeros(wall_sections-1)}
-    absprob = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.02}
+    absprob = {"121.567E-9": np.zeros(wall_sections-1)+0.4, "450E-9": np.zeros(wall_sections-1)+0.02}
     WLconversion = {"121.567E-9": np.zeros(wall_sections-1)+0.5, "450E-9": np.zeros(wall_sections-1)}
 
     if custom:

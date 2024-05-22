@@ -154,7 +154,8 @@ class SampleCell:
         Returns:
             np.ndarray (x,y,z): Random unit vector"""
         theta = np.random.rand() * 2 * np.pi
-        phi = (np.random.rand()-0.5) * np.pi
+        inversedist = np.arccos(1-2*np.random.rand())
+        phi = np.pi/2-inversedist
         z = np.sin(phi)
         x = np.cos(theta) * np.cos(phi)
         y = np.sin(theta) * np.cos(phi)
