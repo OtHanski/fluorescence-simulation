@@ -31,18 +31,10 @@ shape = "cylinder"
 r_cell = 8E-3 # Radius of the cell [m]
 l_cell = 200E-3 # Length of the cell [m]
 # Gas cloud parameters:
-<<<<<<< HEAD
-gas_height = 10E-3 # Height of the gas cloud [m]
-gas_offset = 105E-3 # Offset of the gas cloud from the cell bottom [m]
-gas_radius = 1.5E-3 # Radius of the gas cloud [m]
-
-custom = 1
-=======
 gas_height = 5E-2 # Height of the gas cloud [m]
 gas_offset = (l_cell-gas_height)/2 # Offset of the gas cloud from the cell bottom [m]
 #gas_height = 0E-2 # override
 gas_radius = 1E-3 # Radius of the gas cloud [m]
->>>>>>> 8beecb0c5eec1e76f98bfd9f125839b7d4b9f39d
 ### End of simulation settings ###
 
 def randomGasPoint(gas_height = gas_height, gas_offset = gas_offset, gas_radius = gas_radius):
