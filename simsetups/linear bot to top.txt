@@ -30,7 +30,7 @@ WLconversion["450E-9"][i] = 0
 
 Full diffusive
 
-specrefl = {"121.567E-9": np.zeros(wall_sections-1), "450E-9": np.zeros(wall_sections-1)}
-diffrefl = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.98}
-absprob = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.02}
-WLconversion = {"121.567E-9": np.zeros(wall_sections-1)+0.5, "450E-9": np.zeros(wall_sections-1)}
+            specrefl = {"121.567E-9": np.zeros(wall_sections-1), "450E-9": np.zeros(wall_sections-1)}
+            diffrefl = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.98}
+            absprob = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.02}
+            WLconversion = {"121.567E-9": np.zeros(wall_sections-1)+0.5, "450E-9": np.zeros(wall_sections-1)}
