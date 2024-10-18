@@ -17,7 +17,7 @@ plot_WallHeatMap = 1
 
 # Plot settings
 lgscl = 1 # Logscale for histograms
-densityplot = 1 # Change exithistogram to density plot
+densityplot = 0 # Change exithistogram to density plot
 
 savefigures = 1
 plt.rcParams['figure.figsize'] = (12, 12)

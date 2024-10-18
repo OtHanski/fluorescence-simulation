@@ -23,18 +23,18 @@ import FileHandler as fh
 filename = "simulation"
 output = "json" # "dat" or "json"
 # Number of particles to simulate
-simulations = 500000
+simulations = 60000
 # Number of wall sections to divide the cell into (1 to n)
-wall_sections = 150
+wall_sections = 400
 # Cell parameters:
 shape = "cylinder"
-r_cell = 5E-3 # Radius of the cell [m]
-l_cell = 120E-3 # Length of the cell [m]
+r_cell = 70E-3 # Radius of the cell [m] (7.5mm for HRG T2 trap)
+l_cell = 550E-3 # Length of the cell [m] (200 mm for HRG T2 trap, 550 for Big)
 # Gas cloud parameters:
-gas_height = 10E-3 # Height of the gas cloud [m]
-gas_offset = (l_cell-gas_height)/2 # Offset of the gas cloud from the cell bottom [m]
+gas_height = 200E-3 # Height of the gas cloud [m]
+gas_offset = 275E-3 # Offset of the gas cloud from the cell bottom [m], (l_cell-gas_height)/2 for centering, 275E-3 for sample cell mid with 200mm length
 #gas_height = 0E-2 # override
-gas_radius = 1E-3 # Radius of the gas cloud [m]
+gas_radius = 0.5E-3 # Radius of the gas cloud [m]
 
 custom = 1
 ### End of simulation settings ###
@@ -132,11 +132,56 @@ def main(simulations = simulations, wall_sections = wall_sections, r_cell = r_ce
 
     if custom:
         arrlen = len(specrefl["121.567E-9"])
+        # Base stats
+        specrefl = {"121.567E-9": np.zeros(wall_sections-1), "450E-9": np.zeros(wall_sections-1)}
+        diffrefl = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.98}
+        absprob = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.02}
+        WLconversion = {"121.567E-9": np.zeros(wall_sections-1)+0.5, "450E-9": np.zeros(wall_sections-1)}
         for i in range(arrlen):
-            specrefl = {"121.567E-9": np.zeros(wall_sections-1), "450E-9": np.zeros(wall_sections-1)}
-            diffrefl = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.98}
-            absprob = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.02}
-            WLconversion = {"121.567E-9": np.zeros(wall_sections-1)+0.5, "450E-9": np.zeros(wall_sections-1)}
+            if z[i] <= 100E-3:
+                # TPB coated
+                specrefl["121.567E-9"][i] = 0.15
+                diffrefl["121.567E-9"][i] = 0.1
+                absprob["121.567E-9"][i] = 0.25
+                WLconversion["121.567E-9"][i] = 0.5
+                specrefl["450E-9"][i] = 0.88
+                diffrefl["450E-9"][i] = 0.1
+                absprob["450E-9"][i] = 0.02
+                WLconversion["450E-9"][i] = 0
+            
+            if z[i] <= 200E-3 and z[i] >= 100E-3:
+                # No coat
+                specrefl["121.567E-9"][i] = 0.45
+                diffrefl["121.567E-9"][i] = 0.05
+                absprob["121.567E-9"][i] = 0.5
+                WLconversion["121.567E-9"][i] = 0
+                specrefl["450E-9"][i] = 0.96
+                diffrefl["450E-9"][i] = 0.02
+                absprob["450E-9"][i] = 0.02
+                WLconversion["450E-9"][i] = 0
+
+            if z[i] >= 200E-3:
+                # Large trap modeled as perfect absorber
+                specrefl["121.567E-9"][i] = 0
+                specrefl["450E-9"][i] = 0
+                diffrefl["121.567E-9"][i] = 0
+                diffrefl["450E-9"][i] = 0
+                absprob["121.567E-9"][i] = 1
+                absprob["450E-9"][i] = 1
+                WLconversion["121.567E-9"][i] = 0
+                WLconversion["450E-9"][i] = 0
+                
+            if z[i] <= 9E-3 and z[i] >= 3E-3:
+                # SiPMs modeled as perfect absorbers
+                specrefl["121.567E-9"][i] = 0
+                specrefl["450E-9"][i] = 0
+                diffrefl["121.567E-9"][i] = 0
+                diffrefl["450E-9"][i] = 0
+                absprob["121.567E-9"][i] = 1
+                absprob["450E-9"][i] = 1
+                WLconversion["121.567E-9"][i] = 0
+                WLconversion["450E-9"][i] = 0
+
 
 
     cell = SampleCell(z, r, specrefl=specrefl, diffrefl=diffrefl, absprob=absprob, 
