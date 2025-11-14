@@ -1,0 +1,25 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Hydrogen 1S-2S fluorescence simulation
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Otto Olavi
+    family-names: Hanski
+    email: otolha@utu.fi
+    affiliation: University of Turku
+    orcid: 'https://orcid.org/0000-0002-3230-2332'
+repository-code: 'https://github.com/OtHanski/fluorescence-simulation'
+abstract: >-
+  Package for simulating fluorescence and detection of
+  atomic hydrogen in a cryogenic sample cell.
+keywords:
+  - Monte Carlo
+  - Simulation
+  - Atomic hydrogen
+  - Fluorescence
+license: MIT
