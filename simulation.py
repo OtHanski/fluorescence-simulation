@@ -1,202 +1,240 @@
-"""
-Main file for running the simulation, only implement the main simulation loop here. 
-Should be run from CMD.
+import csv
+from tap import Tap
+from samplecell import SurfaceProperties
 
-Set up the simulation environment (Samplecell profile, how many sims), and run the 
-simulation loop (Create new photon objects, simulate them). Append results to file 
-every N simulations to avoid memory overflow and to avoid losing data in case of crash.
+class CoatingPresets:
+	@staticmethod
+	def fully_absorptive():
+		"""All photons absorbed, no reflection or conversion."""
+		return SurfaceProperties(
+			absorption={'blue': 1.0, 'uv': 1.0},
+			conversion={'blue': 0.0, 'uv': 0.0},
+			specular={'blue': 0.0, 'uv': 0.0},
+			diffuse={'blue': 0.0, 'uv': 0.0}
+		)
 
-Finally, plot data and results with pyplot.
+	@staticmethod
+	def specular_mirror():
+		"""Highly specular reflective mirror, no absorption or conversion."""
+		return SurfaceProperties(
+			absorption={'blue': 0.0, 'uv': 0.0},
+			conversion={'blue': 0.0, 'uv': 0.0},
+			specular={'blue': 1.0, 'uv': 1.0},
+			diffuse={'blue': 0.0, 'uv': 0.0}
+		)
 
-If you're *really* bored, multithread the operation :D
-"""
+	@staticmethod
+	def diffuse_converter():
+		"""Diffuse reflective, 50% UV->blue conversion, 50% diffuse reflection for UV, blue is just reflected diffusely."""
+		return SurfaceProperties(
+			absorption={'blue': 0.0, 'uv': 0.0},
+			conversion={'blue': 0.0, 'uv': 0.5},  # 50% of UV photons convert to blue
+			specular={'blue': 0.0, 'uv': 0.0},
+			diffuse={'blue': 1.0, 'uv': 0.5}      # blue: 100% diffuse, uv: 50% diffuse (rest converts)
+		)
+from samplecell import SampleCell
 import numpy as np
-import traceback
-import time
 
-# Local modules
-from photon import photon
-from SampleCell import SampleCell
-import FileHandler as fh
+class Preset:
+	@staticmethod
+	def build_system():
+		"""
+		Returns a SampleCell with:
+		- Bottom: 16mm radius, 30cm long cylinder
+		- Top: 150mm radius, 40cm long cylinder, stacked on bottom
+		- 6 sensors radially at the edge of the bottom cylinder
+		- 9 sensors at the top flange around the axis of the top cylinder
+		"""
+		cell = SampleCell()
+		# Bottom cylinder
+		r1 = 0.016  # 16 mm
+		h1 = 0.30   # 30 cm
+		c1 = np.array([0,0,0])
+		cyl1 = cell.add_cylinder(center=c1, radius=r1, height=h1)
+		# Top cylinder
+		r2 = 0.150  # 150 mm
+		h2 = 0.40   # 40 cm
+		cyl2 = cell.add_cylinder(center=None, radius=r2, height=h2, connect_to=cyl1)
 
-### Simulation settings ###
-filename = "simulation"
-output = "json" # "dat" or "json"
-# Number of particles to simulate
-simulations = 60000
-# Number of wall sections to divide the cell into (1 to n)
-wall_sections = 400
-# Cell parameters:
-shape = "cylinder"
-r_cell = 70E-3 # Radius of the cell [m] (7.5mm for HRG T2 trap)
-l_cell = 550E-3 # Length of the cell [m] (200 mm for HRG T2 trap, 550 for Big)
-# Gas cloud parameters:
-gas_height = 200E-3 # Height of the gas cloud [m]
-gas_offset = 275E-3 # Offset of the gas cloud from the cell bottom [m], (l_cell-gas_height)/2 for centering, 275E-3 for sample cell mid with 200mm length
-#gas_height = 0E-2 # override
-gas_radius = 0.5E-3 # Radius of the gas cloud [m]
+		# 6 sensors at edge of bottom cylinder (z=0, r=r1, evenly spaced)
+		for i in range(6):
+			angle = 2 * np.pi * i / 6
+			x = r1 * np.cos(angle)
+			y = r1 * np.sin(angle)
+			center = [x, y, 0]
+			normal = [x, y, 0]
+			normal = np.array(normal)
+			if np.linalg.norm(normal) == 0:
+				normal = [0,0,1]
+			else:
+				normal = normal / np.linalg.norm(normal)
+			cell.add_sensor(center=center, normal=normal)
 
-custom = 1
-### End of simulation settings ###
+		# 9 sensors at top flange (z=h1+h2, r=r2, evenly spaced)
+		z_top = h1 + h2
+		for i in range(9):
+			angle = 2 * np.pi * i / 9
+			x = r2 * np.cos(angle)
+			y = r2 * np.sin(angle)
+			center = [x, y, z_top]
+			normal = [x, y, 0]
+			normal = np.array(normal)
+			if np.linalg.norm(normal) == 0:
+				normal = [0,0,1]
+			else:
+				normal = normal / np.linalg.norm(normal)
+			cell.add_sensor(center=center, normal=normal)
 
-def randomGasPoint(gas_height = gas_height, gas_offset = gas_offset, gas_radius = gas_radius):
-    """
-    Give a random point in the gas cloud. The gas cloud is modeled as 
-    a cylinder according to the gas cloud parameters. In this function
-    one should define a density distribution rho(r,z) which is used for 
-    the generation.
+		return cell
+import numpy as np
+from photon import Photon
 
-    Returns:
-        np.ndarray (x,y,z): Random point in the gas cloud, in SampleCell coordinates 
-    """
-    # For now we use uniform distribution
-    z = np.random.rand() * gas_height + gas_offset
-    r_rand = np.random.rand()
-    r = np.sqrt(r_rand) * gas_radius # SQRT to get uniform distribution in volume 
-    theta = np.random.rand() * 2 * np.pi
+class PhotonSource:
+	def __init__(self, center, radius, temperature, mass, g=9.81, axis=(0,0,1), wavelength='uv', rng=np.random):
+		"""
+		center: (x, y, z) tuple for base center of the cloud
+		radius: radius of the cloud (adjustable)
+		temperature: temperature in Kelvin
+		mass: mass of gas particle (kg)
+		g: gravitational acceleration (m/s^2)
+		axis: direction of cylinder axis (default z)
+		wavelength: photon wavelength to emit
+		rng: random number generator
+		"""
+		self.center = np.array(center, dtype=float)
+		self.radius = radius
+		self.temperature = temperature
+		self.mass = mass
+		self.g = g
+		self.axis = np.array(axis, dtype=float) / np.linalg.norm(axis)
+		self.wavelength = wavelength
+		self.rng = rng
+		# Calculate height from temperature and gravity (Boltzmann distribution)
+		k_B = 1.380649e-23  # Boltzmann constant (J/K)
+		# Height where exp(-mgh/kT) ~ 0.01 (i.e., 99% of atoms below this height)
+		self.height = -k_B * temperature / (mass * g) * np.log(0.01)
 
-    return np.array([r*np.cos(theta), r*np.sin(theta), z])
+	def random_point(self):
+		"""Generate a random point inside the cylindrical cloud."""
+		# Random height (Boltzmann distribution)
+		k_B = 1.380649e-23
+		z = self.rng.uniform(0, self.height)
+		# For true Boltzmann, sample z with exp(-m g z / kT) weighting
+		# Inverse CDF: z = -kT/(mg) * log(1-u), u~Uniform(0,1)
+		u = self.rng.uniform(0,1)
+		z = -k_B * self.temperature / (self.mass * self.g) * np.log(1-u)
+		# Random radius (uniform in area)
+		r = self.radius * np.sqrt(self.rng.uniform(0,1))
+		theta = self.rng.uniform(0, 2*np.pi)
+		x = r * np.cos(theta)
+		y = r * np.sin(theta)
+		# Place in 3D
+		base = self.center
+		# Build orthonormal basis
+		z_axis = self.axis
+		# Find a perpendicular vector
+		if abs(z_axis[0]) < 0.9:
+			x_axis = np.cross(z_axis, [1,0,0])
+		else:
+			x_axis = np.cross(z_axis, [0,1,0])
+		x_axis /= np.linalg.norm(x_axis)
+		y_axis = np.cross(z_axis, x_axis)
+		pos = base + x * x_axis + y * y_axis + z * z_axis
+		return pos
 
-def simulate_dat(sampCell = None, filename = filename, simulations = simulations, 
-                 wall_sections = wall_sections, r_cell = r_cell, l_cell = l_cell):
-    filepath = f"./data/{filename}.dat"
-    with open(filepath, "w") as f:
-        f.write("pos(x,y,z)\tdir(dx,dy,dz)\trad_to_z\tbounces\twavelength\tevent\n")
-    # Simulate the photons
-    starttime = time.time()
-    writestr = ""
-    for i in range(simulations):
-        # Generate a random point in the gas cloud
-        if (i+1) % min(int(simulations/10), 25000) == 0:
-            print(f"\nSimulating photon {i+1}/{simulations}, time elapsed: {time.time()-starttime:.2f}s\n")
-        pos = randomGasPoint()
-        phot = photon(sampCell=sampCell, position=pos, id = i+1)
-        try:
-            result = phot.simulate()
-            writestr += phot.data_to_string()+"\n"
-            # Append results to file every 10 photons (save IO time)
-            if (i+1) % 10 == 0:
-                fh.WriteDat(filepath = filepath, 
-                            string_to_write = writestr, 
-                            writemode = "a")
-                writestr = ""
-        except Exception as e:
-            print(f"Error at photon {i+1}: {e}")
-            print(traceback.format_exc())
-            continue
-    print(f"Simulation of {simulations} photons completed in {time.time()-starttime:.2f}s\n")
+	def random_direction(self):
+		"""Return a random unit vector (isotropic emission)."""
+		phi = self.rng.uniform(0, 2*np.pi)
+		costheta = self.rng.uniform(-1, 1)
+		sintheta = np.sqrt(1 - costheta**2)
+		return np.array([sintheta * np.cos(phi), sintheta * np.sin(phi), costheta])
 
-def simulate_json(sampCell = None, filename = filename, simulations = simulations, 
-                 wall_sections = wall_sections, r_cell = r_cell, l_cell = l_cell):
-    filepath = f"./data/{filename}.json"
-    
-    # Simulate the photons
-    starttime = time.time()
-    data = {"photons": {},
-            "metadata": {"date": time.strftime("%Y-%m-%d %H:%M:%S"),
-                         "simulations": simulations,
-                         "wall_sections": wall_sections,
-                         "r_cell": r_cell,
-                         "l_cell": l_cell}
-            }
-    for i in range(simulations):
-        # Generate a random point in the gas cloud
-        if (i+1) % min(int(simulations/10), 25000) == 0:
-            print(f"\n{time.strftime('%H:%M',time.localtime())}\tSimulating photon {i+1}/{simulations}, time elapsed: {time.time()-starttime:.2f}s\n")
-        pos = randomGasPoint()
-        # , direction=np.array([0.02,0,1])
-        phot = photon(sampCell=sampCell, position=pos, id = i+1)
-        try:
-            result = phot.simulate(verbose = False)
-            data["photons"][i+1] = phot.data_to_dict()
-        except Exception as e:
-            print(f"Error at photon {i+1}: {e}")
-            print(traceback.format_exc())
-            continue
-    data["metadata"]["time"] = time.time()-starttime
-    fh.WriteJson(filepath, data)
-    print(f"Simulation of {simulations} photons completed in {time.time()-starttime:.2f}s\n")
-
-
-def main(simulations = simulations, wall_sections = wall_sections, r_cell = r_cell, l_cell = l_cell):
-    # Generate a sample cell geometry with straight cylindrical walls
-    z = np.linspace(0,l_cell,wall_sections)
-    r = np.ones(wall_sections) * r_cell
-    wavelengths = np.array(["121.567E-9", "450E-9"])
-
-    # Create the parameter dictionaries for the SampleCell
-    specrefl = {"121.567E-9": np.zeros(wall_sections-1)+0.12, "450E-9": np.zeros(wall_sections-1)+0.98}
-    diffrefl = {"121.567E-9": np.zeros(wall_sections-1), "450E-9": np.zeros(wall_sections-1)}
-    absprob = {"121.567E-9": np.zeros(wall_sections-1)+0.38, "450E-9": np.zeros(wall_sections-1)+0.02}
-    WLconversion = {"121.567E-9": np.zeros(wall_sections-1)+0.5, "450E-9": np.zeros(wall_sections-1)}
-
-    if custom:
-        arrlen = len(specrefl["121.567E-9"])
-        # Base stats
-        specrefl = {"121.567E-9": np.zeros(wall_sections-1), "450E-9": np.zeros(wall_sections-1)}
-        diffrefl = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.98}
-        absprob = {"121.567E-9": np.zeros(wall_sections-1)+0.25, "450E-9": np.zeros(wall_sections-1)+0.02}
-        WLconversion = {"121.567E-9": np.zeros(wall_sections-1)+0.5, "450E-9": np.zeros(wall_sections-1)}
-        for i in range(arrlen):
-            if z[i] <= 100E-3:
-                # TPB coated
-                specrefl["121.567E-9"][i] = 0.15
-                diffrefl["121.567E-9"][i] = 0.1
-                absprob["121.567E-9"][i] = 0.25
-                WLconversion["121.567E-9"][i] = 0.5
-                specrefl["450E-9"][i] = 0.88
-                diffrefl["450E-9"][i] = 0.1
-                absprob["450E-9"][i] = 0.02
-                WLconversion["450E-9"][i] = 0
-            
-            if z[i] <= 200E-3 and z[i] >= 100E-3:
-                # No coat
-                specrefl["121.567E-9"][i] = 0.45
-                diffrefl["121.567E-9"][i] = 0.05
-                absprob["121.567E-9"][i] = 0.5
-                WLconversion["121.567E-9"][i] = 0
-                specrefl["450E-9"][i] = 0.96
-                diffrefl["450E-9"][i] = 0.02
-                absprob["450E-9"][i] = 0.02
-                WLconversion["450E-9"][i] = 0
-
-            if z[i] >= 200E-3:
-                # Large trap modeled as perfect absorber
-                specrefl["121.567E-9"][i] = 0
-                specrefl["450E-9"][i] = 0
-                diffrefl["121.567E-9"][i] = 0
-                diffrefl["450E-9"][i] = 0
-                absprob["121.567E-9"][i] = 1
-                absprob["450E-9"][i] = 1
-                WLconversion["121.567E-9"][i] = 0
-                WLconversion["450E-9"][i] = 0
-                
-            if z[i] <= 9E-3 and z[i] >= 3E-3:
-                # SiPMs modeled as perfect absorbers
-                specrefl["121.567E-9"][i] = 0
-                specrefl["450E-9"][i] = 0
-                diffrefl["121.567E-9"][i] = 0
-                diffrefl["450E-9"][i] = 0
-                absprob["121.567E-9"][i] = 1
-                absprob["450E-9"][i] = 1
-                WLconversion["121.567E-9"][i] = 0
-                WLconversion["450E-9"][i] = 0
+	def emit_photon(self):
+		"""Generate a photon at a random position and direction in the source."""
+		pos = self.random_point()
+		direction = self.random_direction()
+		return Photon(pos, direction, self.wavelength)
 
 
+# --- Simulation CLI ---
 
-    cell = SampleCell(z, r, specrefl=specrefl, diffrefl=diffrefl, absprob=absprob, 
-                      WLconversion=WLconversion, samples=wall_sections, wavelengths=wavelengths)
+# Default particle mass: Rb-87 atom (kg)
+_RB87_MASS = 87 * 1.66053906660e-27
+# Cloud radius inside the bottom cylinder (m)
+_CLOUD_RADIUS = 0.012
 
-    print(f"Beginning simulation of {simulations} photons")
-    
-    if output == "dat":
-        simulate_dat(sampCell = cell, simulations = simulations)
-    elif output == "json":
-        simulate_json(sampCell = cell, simulations = simulations)
-    
+class SimArgs(Tap):
+	n_photons: int   # Number of UV photons to simulate
+	temperature: float  # Temperature of the gas in Kelvin
+	output: str = 'results.csv'  # Output CSV file path
+	mass: float = _RB87_MASS  # Gas particle mass in kg
+	max_bounces: int = 1000  # Safety limit on bounces per photon
+	seed: int = None  # Random seed for reproducibility
 
 
+def run_simulation(args: SimArgs):
+	rng = np.random.RandomState(args.seed)
 
-# If called from CMD, run main
-if __name__ == "__main__":
-    main()
+	# Build cell
+	cell = Preset.build_system()
+
+	# Photon source: centred at base of bottom cylinder
+	source = PhotonSource(
+		center=[0, 0, 0],
+		radius=_CLOUD_RADIUS,
+		temperature=args.temperature,
+		mass=args.mass,
+		wavelength='uv',
+		rng=rng
+	)
+
+	records = []
+	for i in range(args.n_photons):
+		photon = source.emit_photon()
+		outcome = 'lost'
+		bounces = 0
+
+		while not photon.absorbed and bounces < args.max_bounces:
+			event, info = cell.traverse_photon(photon, rng=rng)
+			bounces += 1
+			if event == 'detected':
+				outcome = 'detected'
+				break
+			elif event == 'absorbed':
+				outcome = 'absorbed'
+				break
+			elif event == 'escaped':
+				outcome = 'lost'
+				break
+			# specular, diffuse, converted: photon continues
+
+		if bounces >= args.max_bounces:
+			outcome = 'lost'
+
+		records.append({
+			'photon_id': i,
+			'outcome': outcome,
+			'x': photon.position[0],
+			'y': photon.position[1],
+			'z': photon.position[2],
+			'wavelength': photon.wavelength,
+		})
+
+	with open(args.output, 'w', newline='') as f:
+		writer = csv.DictWriter(f, fieldnames=['photon_id', 'outcome', 'x', 'y', 'z', 'wavelength'])
+		writer.writeheader()
+		writer.writerows(records)
+
+	n_det = sum(1 for r in records if r['outcome'] == 'detected')
+	n_abs = sum(1 for r in records if r['outcome'] == 'absorbed')
+	n_lost = sum(1 for r in records if r['outcome'] == 'lost')
+	print(f"Simulated {args.n_photons} photons.")
+	print(f"  Detected:  {n_det}  ({100*n_det/args.n_photons:.1f}%)")
+	print(f"  Absorbed:  {n_abs}  ({100*n_abs/args.n_photons:.1f}%)")
+	print(f"  Lost:      {n_lost}  ({100*n_lost/args.n_photons:.1f}%)")
+	print(f"Results written to: {args.output}")
+
+
+if __name__ == '__main__':
+	args = SimArgs().parse_args()
+	run_simulation(args)
