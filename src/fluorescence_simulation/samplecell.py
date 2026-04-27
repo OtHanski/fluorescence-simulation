@@ -1,7 +1,5 @@
 import numpy as np
 
-import numpy as np
-
 # --- Sensor class ---
 class Sensor:
     def __init__(self, center, normal, width=0.005, height=0.005, efficiency=None):
@@ -29,120 +27,7 @@ class Sensor:
         eff = self.efficiency.get(photon.wavelength, 0.0)
         return rng.rand() < eff
 
-# --- SurfaceProperties class ---
-class SurfaceProperties:
-    def __init__(self, absorption, conversion, specular, diffuse):
-        self.absorption = absorption
-        self.conversion = conversion
-        self.specular = specular
-        self.diffuse = diffuse
 
-    def get(self, prop, wavelength, coord):
-        val = getattr(self, prop)[wavelength]
-        if callable(val):
-            return val(coord)
-        return val
-
-# --- Cylinder class ---
-class Cylinder:
-    def __init__(self, center, radius, height, axis=(0, 0, 1), connect_to=None,
-                 side_properties=None, top_properties=None, bottom_properties=None):
-        self.center = np.array(center, dtype=float)
-        self.radius = radius
-        self.height = height
-        self.axis = np.array(axis, dtype=float) / np.linalg.norm(axis)
-        self.connect_to = connect_to
-        self.side_properties = side_properties or SurfaceProperties(
-            {'blue': 0.0, 'uv': 0.0}, {'blue': 0.0, 'uv': 0.0}, {'blue': 1.0, 'uv': 1.0}, {'blue': 0.0, 'uv': 0.0})
-        self.top_properties = top_properties or SurfaceProperties(
-            {'blue': 0.0, 'uv': 0.0}, {'blue': 0.0, 'uv': 0.0}, {'blue': 1.0, 'uv': 1.0}, {'blue': 0.0, 'uv': 0.0})
-        self.bottom_properties = bottom_properties or SurfaceProperties(
-            {'blue': 0.0, 'uv': 0.0}, {'blue': 0.0, 'uv': 0.0}, {'blue': 1.0, 'uv': 1.0}, {'blue': 0.0, 'uv': 0.0})
-
-    def get_side_property(self, prop, wavelength, z):
-        return self.side_properties.get(prop, wavelength, z)
-
-    def get_endcap_property(self, which, prop, wavelength, r):
-        if which == 'top':
-            return self.top_properties.get(prop, wavelength, r)
-        elif which == 'bottom':
-            return self.bottom_properties.get(prop, wavelength, r)
-        else:
-            raise ValueError("which must be 'top' or 'bottom'")
-
-    def top_center(self):
-        return self.center + self.axis * self.height
-
-    def contains(self, point):
-        point = np.array(point, dtype=float)
-        rel = point - self.center
-        h = np.dot(rel, self.axis)
-        if 0 <= h <= self.height:
-            proj = self.center + h * self.axis
-            r = np.linalg.norm(point - proj)
-            return r <= self.radius
-        return False
-
-# --- SampleCell class ---
-class SampleCell:
-    def __init__(self):
-        self.cylinders = []
-        self.connections = []
-
-    def add_cylinder(self, center, radius, height, axis=(0, 0, 1), connect_to=None,
-                     side_properties=None, top_properties=None, bottom_properties=None):
-        if connect_to is not None:
-            center = np.array(connect_to.top_center())
-        cyl = Cylinder(center, radius, height, axis, connect_to,
-                       side_properties, top_properties, bottom_properties)
-        self.cylinders.append(cyl)
-        if connect_to is not None:
-            self.connections.append((connect_to, cyl))
-        return cyl
-
-    def add_sensor(self, center, normal, width=0.005, height=0.005, efficiency=None):
-        if not hasattr(self, 'sensors'):
-            self.sensors = []
-        sensor = Sensor(center, normal, width, height, efficiency)
-        self.sensors.append(sensor)
-        return sensor
-
-    def check_sensors(self, photon, rng=np.random):
-        if not hasattr(self, 'sensors'):
-            return None, False
-        for sensor in self.sensors:
-            if sensor.contains(photon.position):
-                detected = sensor.detect(photon, rng)
-                return sensor, detected
-        return None, False
-
-    def traverse_photon(self, photon, rng=np.random):
-        # ...existing code for traverse_photon...
-        # (leave as is)
-
-    def contains(self, point):
-        return any(cyl.contains(point) for cyl in self.cylinders)
-
-    def get_accessible_cylinders(self, start_cyl=None):
-        if not self.cylinders:
-            return []
-        if start_cyl is None:
-            start_cyl = self.cylinders[0]
-        visited = set()
-        stack = [start_cyl]
-        while stack:
-            cyl = stack.pop()
-            if cyl in visited:
-                continue
-            visited.add(cyl)
-            for (from_cyl, to_cyl) in self.connections:
-                if from_cyl == cyl and to_cyl not in visited:
-                    stack.append(to_cyl)
-        return visited
-
-    def is_accessible(self, point):
-        accessible_cyls = self.get_accessible_cylinders()
-        return any(cyl.contains(point) for cyl in accessible_cyls)
 class SurfaceProperties:
         def __init__(self, absorption, conversion, specular, diffuse):
                 """
@@ -170,8 +55,6 @@ class SurfaceProperties:
                         return val(coord)
                 return val
 
-# import numpy for vector math
-import numpy as np
 
 class Cylinder:
     def __init__(self, center, radius, height, axis=(0, 0, 1), connect_to=None,
@@ -249,6 +132,7 @@ class SampleCell:
                 detected = sensor.detect(photon, rng)
                 return sensor, detected
         return None, False
+
     def traverse_photon(self, photon, rng=np.random):
         """
         Move the photon until it interacts with a surface, then simulate the interaction.
@@ -428,46 +312,3 @@ class SampleCell:
         """
         accessible_cyls = self.get_accessible_cylinders()
         return any(cyl.contains(point) for cyl in accessible_cyls)
-import numpy as np
-
-class Cylinder:
-    def __init__(self, center, radius, height, axis=(0, 0, 1)):
-        """
-        center: (x, y, z) tuple for the center of the cylinder base
-        radius: radius of the cylinder
-        height: height of the cylinder
-        axis: direction vector of the cylinder axis (default is z-axis)
-        """
-        self.center = np.array(center)
-        self.radius = radius
-        self.height = height
-        self.axis = np.array(axis) / np.linalg.norm(axis)
-
-    def contains(self, point):
-        """
-        Check if a point is inside the cylinder.
-        """
-        point = np.array(point)
-        # Project point onto axis
-        rel = point - self.center
-        h = np.dot(rel, self.axis)
-        if 0 <= h <= self.height:
-            # Distance from axis
-            proj = self.center + h * self.axis
-            r = np.linalg.norm(point - proj)
-            return r <= self.radius
-        return False
-
-class SampleCell:
-    def __init__(self):
-        self.cylinders = []
-
-    def add_cylinder(self, center, radius, height, axis=(0, 0, 1)):
-        cyl = Cylinder(center, radius, height, axis)
-        self.cylinders.append(cyl)
-
-    def contains(self, point):
-        """
-        Check if a point is inside any of the cylinders in the sample cell.
-        """
-        return any(cyl.contains(point) for cyl in self.cylinders)

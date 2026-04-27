@@ -1,6 +1,11 @@
+
 import csv
+import numpy as np
 from tap import Tap
-from samplecell import SurfaceProperties
+from tqdm import tqdm
+
+from fluorescence_simulation.photon import Photon
+from fluorescence_simulation.samplecell import SurfaceProperties, SampleCell
 
 class CoatingPresets:
 	@staticmethod
@@ -32,8 +37,6 @@ class CoatingPresets:
 			specular={'blue': 0.0, 'uv': 0.0},
 			diffuse={'blue': 1.0, 'uv': 0.5}      # blue: 100% diffuse, uv: 50% diffuse (rest converts)
 		)
-from samplecell import SampleCell
-import numpy as np
 
 class Preset:
 	@staticmethod
@@ -86,8 +89,6 @@ class Preset:
 			cell.add_sensor(center=center, normal=normal)
 
 		return cell
-import numpy as np
-from photon import Photon
 
 class PhotonSource:
 	def __init__(self, center, radius, temperature, mass, g=9.81, axis=(0,0,1), wavelength='uv', rng=np.random):
@@ -158,8 +159,8 @@ class PhotonSource:
 
 # --- Simulation CLI ---
 
-# Default particle mass: Rb-87 atom (kg)
-_RB87_MASS = 87 * 1.66053906660e-27
+# Default particle mass: Hydrogen atom
+_HYDROGEN_MASS = 1.66053906660e-27
 # Cloud radius inside the bottom cylinder (m)
 _CLOUD_RADIUS = 0.012
 
@@ -167,8 +168,8 @@ class SimArgs(Tap):
 	n_photons: int   # Number of UV photons to simulate
 	temperature: float  # Temperature of the gas in Kelvin
 	output: str = 'results.csv'  # Output CSV file path
-	mass: float = _RB87_MASS  # Gas particle mass in kg
-	max_bounces: int = 1000  # Safety limit on bounces per photon
+	mass: float = _HYDROGEN_MASS  # Gas particle mass in kg
+	max_bounces: int = 10000  # Safety limit on bounces per photon
 	seed: int = None  # Random seed for reproducibility
 
 
@@ -188,40 +189,50 @@ def run_simulation(args: SimArgs):
 		rng=rng
 	)
 
+
 	records = []
-	for i in range(args.n_photons):
-		photon = source.emit_photon()
-		outcome = 'lost'
-		bounces = 0
+	# Progress bar: update every 1% or at least every 1000 photons
+	n = args.n_photons
+	min_update = max(1, n // 100)
+	min_update = min_update if min_update >= 1000 else 1000
 
-		while not photon.absorbed and bounces < args.max_bounces:
-			event, info = cell.traverse_photon(photon, rng=rng)
-			bounces += 1
-			if event == 'detected':
-				outcome = 'detected'
-				break
-			elif event == 'absorbed':
-				outcome = 'absorbed'
-				break
-			elif event == 'escaped':
-				outcome = 'lost'
-				break
-			# specular, diffuse, converted: photon continues
-
-		if bounces >= args.max_bounces:
+	with tqdm(total=n, desc="Simulating photons", unit="photon", miniters=min_update) as pbar:
+		for i in range(n):
+			photon = source.emit_photon()
 			outcome = 'lost'
+			bounces = 0
 
-		records.append({
-			'photon_id': i,
-			'outcome': outcome,
-			'x': photon.position[0],
-			'y': photon.position[1],
-			'z': photon.position[2],
-			'wavelength': photon.wavelength,
-		})
+			while not photon.absorbed and bounces < args.max_bounces:
+				event, info = cell.traverse_photon(photon, rng=rng)
+				if event == 'detected':
+					outcome = 'detected'
+					break
+				elif event == 'absorbed':
+					outcome = 'absorbed'
+					break
+				elif event == 'escaped':
+					outcome = 'lost'
+					break
+				# specular, diffuse, converted: photon continues
+				bounces += 1
+
+			if bounces >= args.max_bounces:
+				outcome = 'lost'
+
+			records.append({
+				'photon_id': i,
+				'outcome': outcome,
+				'bounces': bounces,
+				'x': photon.position[0],
+				'y': photon.position[1],
+				'z': photon.position[2],
+				'wavelength': photon.wavelength,
+			})
+			pbar.update(1)
+
 
 	with open(args.output, 'w', newline='') as f:
-		writer = csv.DictWriter(f, fieldnames=['photon_id', 'outcome', 'x', 'y', 'z', 'wavelength'])
+		writer = csv.DictWriter(f, fieldnames=['photon_id', 'outcome', 'bounces', 'x', 'y', 'z', 'wavelength'])
 		writer.writeheader()
 		writer.writerows(records)
 
@@ -235,6 +246,9 @@ def run_simulation(args: SimArgs):
 	print(f"Results written to: {args.output}")
 
 
-if __name__ == '__main__':
+def main():
 	args = SimArgs().parse_args()
 	run_simulation(args)
+
+if __name__ == '__main__':
+	main()
